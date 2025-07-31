@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "seed": "node scripts/seed-data-sources.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
@@ -38,6 +39,7 @@
     "@radix-ui/react-tooltip": "^1.2.6",
     "@supabase/supabase-js": "^2.52.1",
     "autoprefixer": "^10.4.21",
+    "dotenv": "^16.4.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
