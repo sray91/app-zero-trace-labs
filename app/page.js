@@ -161,7 +161,12 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <img 
+            src="/zero-trace-labs-logo.png" 
+            alt="Zero Trace Labs Logo" 
+            className="h-16 w-16 mx-auto mb-4 animate-pulse"
+          />
+          <Loader2 className="h-6 w-6 animate-spin mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-300">Loading...</p>
         </div>
       </div>
@@ -175,7 +180,11 @@ export default function Home() {
         <div className="text-center mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
-              <Shield className="h-12 w-12 text-blue-600 mr-3" />
+              <img 
+                src="/zero-trace-labs-logo.png" 
+                alt="Zero Trace Labs Logo" 
+                className="h-12 w-12 mr-3"
+              />
               <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
                 Data Broker Search
               </h1>

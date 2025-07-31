@@ -7,6 +7,9 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata = {
   title: 'Data Broker Search',
   description: 'Discover where your personal information appears online across data broker websites. Take control of your digital privacy.',
+  icons: {
+    icon: '/zero-trace-labs-logo.png',
+  }
 }
 
 export default function RootLayout({ children }) {
