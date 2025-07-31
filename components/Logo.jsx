@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
 
@@ -35,7 +35,7 @@ export default function Logo({
   className = '',
   animate = false 
 }) {
-  const [isLoading, setIsLoading] = useState(true)
+  const [imageLoaded, setImageLoaded] = useState(false)
   const [hasError, setHasError] = useState(false)
 
   const sizeClasses = {
@@ -52,11 +52,6 @@ export default function Logo({
     xl: 'text-4xl'
   }
 
-  // Show skeleton while loading
-  if (isLoading) {
-    return <LogoSkeleton size={size} showText={showText} />
-  }
-
   return (
     <div className={cn('flex items-center', className)}>
       <div className={cn(
@@ -66,31 +61,28 @@ export default function Logo({
         sizeClasses[size],
         animate && 'hover:scale-105 transition-transform duration-200'
       )}>
-        {hasError ? (
-          // Fallback when image fails to load
-          <div className={cn(
-            'flex items-center justify-center font-bold text-blue-600 dark:text-blue-400',
-            size === 'small' ? 'text-sm' : 
-            size === 'medium' ? 'text-lg' : 
-            size === 'large' ? 'text-xl' : 'text-2xl'
-          )}>
-            ZTL
-          </div>
-        ) : (
-          <Image
-            src="/zero-trace-labs-logo.png"
-            alt="Zero Trace Labs"
-            width={size === 'xl' ? 80 : size === 'large' ? 64 : size === 'medium' ? 48 : 32}
-            height={size === 'xl' ? 80 : size === 'large' ? 64 : size === 'medium' ? 48 : 32}
-            className="object-contain p-1"
-            priority
-            onLoad={() => setIsLoading(false)}
-            onError={() => {
-              setIsLoading(false)
-              setHasError(true)
-            }}
-          />
-        )}
+        {/* Always show SVG logo for reliability */}
+        <div className={cn(
+          'flex items-center justify-center text-blue-600 dark:text-blue-400',
+          size === 'small' ? 'text-sm' : 
+          size === 'medium' ? 'text-lg' : 
+          size === 'large' ? 'text-xl' : 'text-2xl'
+        )}>
+          <svg 
+            viewBox="0 0 24 24" 
+            fill="currentColor" 
+            className={cn(
+              'w-full h-full p-1.5',
+              size === 'small' ? 'max-w-6' : 
+              size === 'medium' ? 'max-w-8' : 
+              size === 'large' ? 'max-w-10' : 'max-w-12'
+            )}
+          >
+            {/* Shield icon representing security/privacy */}
+            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+            <path d="M8 12l2 2 4-4" stroke="white" strokeWidth="1.5" fill="none"/>
+          </svg>
+        </div>
       </div>
       
       {showText && (
