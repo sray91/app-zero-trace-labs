@@ -5,7 +5,7 @@ INSERT INTO data_sources (name, url, api_endpoint, risk_level, description, data
   (
     'Searchbug People Search',
     'https://searchbug.com',
-    'https://searchbug.com/api/ppl.aspx',
+    '/api/data-broker/searchbug',
     'high',
     'Advanced person search with comprehensive contact information',
     ARRAY['name', 'age', 'address', 'phone', 'email', 'relatives', 'aliases', 'bankruptcy'],
@@ -14,7 +14,7 @@ INSERT INTO data_sources (name, url, api_endpoint, risk_level, description, data
   (
     'Searchbug Background Check',
     'https://searchbug.com',
-    'https://searchbug.com/api/bkg.aspx',
+    '/api/data-broker/searchbug',
     'high',
     'Background check with criminal records and personal information',
     ARRAY['name', 'criminal_records', 'address', 'phone', 'court_records', 'evictions'],
@@ -23,7 +23,7 @@ INSERT INTO data_sources (name, url, api_endpoint, risk_level, description, data
   (
     'Searchbug Criminal Records',
     'https://searchbug.com',
-    'https://searchbug.com/api/crim.aspx',
+    '/api/data-broker/searchbug',
     'high',
     'Criminal records database search',
     ARRAY['name', 'criminal_records', 'offense', 'jurisdiction', 'disposition'],
@@ -32,7 +32,7 @@ INSERT INTO data_sources (name, url, api_endpoint, risk_level, description, data
   (
     'Searchbug Property Records',
     'https://searchbug.com',
-    'https://searchbug.com/api/prop.aspx',
+    '/api/data-broker/searchbug',
     'medium',
     'Property owner information and records',
     ARRAY['name', 'address', 'property_value', 'owner_info', 'phone'],
