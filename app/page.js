@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -32,13 +32,17 @@ export default function Home() {
     submitRemovalRequest, 
     searchHistory, 
     removalRequests,
+    scanPublicBrokerSites,
+    loadExpandedBrokerList,
+    dataSources,
     loading: dataLoading 
   } = useDataBroker()
   
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
-    email: ''
+    email: '',
+    address: ''
   })
   const [searchResults, setSearchResults] = useState([])
   const [isSearching, setIsSearching] = useState(false)
@@ -46,6 +50,8 @@ export default function Home() {
   const [authForm, setAuthForm] = useState({ email: '', password: '' })
   const [authMode, setAuthMode] = useState('signin') // 'signin' or 'signup'
   const [showAuthDialog, setShowAuthDialog] = useState(false)
+  const [isComprehensiveScanning, setIsComprehensiveScanning] = useState(false)
+  const [comprehensiveScanResults, setComprehensiveScanResults] = useState(null)
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -124,6 +130,75 @@ export default function Home() {
     }
   }
 
+  const handleComprehensiveScan = async (e) => {
+    e.preventDefault()
+    
+    if (!formData.fullName.trim()) {
+      alert('Please enter a full name to perform comprehensive scanning')
+      return
+    }
+
+    if (!user) {
+      alert('Please sign in to perform comprehensive scanning')
+      return
+    }
+
+    console.log('🚀 Starting comprehensive scan with data:', {
+      formData: formData,
+      dataSources: dataSources.length,
+      user: !!user
+    })
+
+    setIsComprehensiveScanning(true)
+    setHasSearched(true)
+    
+    try {
+      const scanOptions = {
+        priority: 2, // Scan high and medium priority brokers
+        batchSize: 5
+      }
+      
+      console.log('🔧 Calling scanPublicBrokerSites with options:', scanOptions)
+      const result = await scanPublicBrokerSites(formData, scanOptions)
+      console.log('📊 Scan result:', result)
+      if (result.success) {
+        setComprehensiveScanResults(result)
+        setSearchResults(result.results.map(r => ({
+          id: r.broker_id || Date.now() + Math.random(),
+          source: r.broker_name,
+          url: r.url || '#',
+          dataFound: r.dataFound || [],
+          riskLevel: dataSources.find(ds => ds.name === r.broker_name)?.risk_level || 'medium',
+          description: r.description || 'Comprehensive scan completed',
+          scanMethod: r.scan_method,
+          scanTimestamp: r.scan_timestamp
+        })))
+      } else {
+        alert(`Comprehensive scan failed: ${result.error}`)
+        setSearchResults([])
+        setComprehensiveScanResults(null)
+      }
+    } catch (error) {
+      console.error('Comprehensive scan failed:', error)
+      setSearchResults([])
+      setComprehensiveScanResults(null)
+      alert('Comprehensive scan failed. Please try again.')
+    } finally {
+      setIsComprehensiveScanning(false)
+    }
+  }
+
+  const handleLoadBrokers = async () => {
+    console.log('🔄 Loading brokers manually...')
+    const result = await loadExpandedBrokerList()
+    console.log('📋 Load brokers result:', result)
+    if (result.success) {
+      alert(`Successfully loaded ${result.added} brokers!`)
+    } else {
+      alert(`Failed to load brokers: ${result.error}`)
+    }
+  }
+
   const handleRemovalRequest = async (result) => {
     if (!user) {
       alert('Please sign in to submit removal requests')
@@ -148,6 +223,16 @@ export default function Home() {
       alert('Failed to submit removal request. Please try again.')
     }
   }
+
+  // Initialize data sources when component mounts
+  useEffect(() => {
+    if (user && dataSources.length === 0) {
+      console.log('🔄 Auto-loading data sources...')
+      loadExpandedBrokerList().then(result => {
+        console.log('📋 Auto-load result:', result)
+      })
+    }
+  }, [user, dataSources.length, loadExpandedBrokerList])
 
   const getRiskBadgeColor = (riskLevel) => {
     switch (riskLevel) {
@@ -291,10 +376,14 @@ export default function Home() {
 
         {/* Main Content */}
         <Tabs defaultValue="search" className="max-w-6xl mx-auto">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="search" className="flex items-center">
               <Search className="h-4 w-4 mr-2" />
               Search
+            </TabsTrigger>
+            <TabsTrigger value="comprehensive" className="flex items-center" disabled={!user}>
+              <Shield className="h-4 w-4 mr-2" />
+              Comprehensive Scan
             </TabsTrigger>
             <TabsTrigger value="history" className="flex items-center" disabled={!user}>
               <History className="h-4 w-4 mr-2" />
@@ -370,23 +459,80 @@ export default function Home() {
                     />
                   </div>
                   
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
-                    disabled={isSearching}
-                  >
-                    {isSearching ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Searching...
-                      </>
-                    ) : (
-                      <>
-                        <Search className="h-4 w-4 mr-2" />
-                        Search Data Brokers
-                      </>
-                    )}
-                  </Button>
+                  <div>
+                    <Label htmlFor="address">Address (Optional)</Label>
+                    <Input
+                      id="address"
+                      name="address"
+                      type="text"
+                      placeholder="Enter your address"
+                      value={formData.address}
+                      onChange={handleInputChange}
+                      className="mt-1"
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Button 
+                      type="submit" 
+                      className="w-full" 
+                      disabled={isSearching || isComprehensiveScanning}
+                    >
+                      {isSearching ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Searching...
+                        </>
+                      ) : (
+                        <>
+                          <Search className="h-4 w-4 mr-2" />
+                          Quick Search
+                        </>
+                      )}
+                    </Button>
+                    
+                    <Button 
+                      type="button"
+                      onClick={handleComprehensiveScan}
+                      variant="outline"
+                      className="w-full" 
+                      disabled={isSearching || isComprehensiveScanning || !user}
+                    >
+                      {isComprehensiveScanning ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Scanning...
+                        </>
+                      ) : (
+                        <>
+                          <Shield className="h-4 w-4 mr-2" />
+                          Comprehensive Scan
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  
+                  {/* Debug section - remove in production */}
+                  <div className="border-t pt-4">
+                    <div className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+                      Debug: {dataSources.length} brokers loaded
+                    </div>
+                    <Button 
+                      type="button"
+                      onClick={handleLoadBrokers}
+                      variant="secondary"
+                      size="sm"
+                      disabled={!user}
+                    >
+                      Load Brokers ({dataSources.length})
+                    </Button>
+                  </div>
+                  
+                  {!user && (
+                    <p className="text-sm text-gray-600 dark:text-gray-300 text-center">
+                      Sign in to access comprehensive scanning across {dataSources.length || '17+'} public broker sites
+                    </p>
+                  )}
                 </form>
               </CardContent>
             </Card>
@@ -394,16 +540,33 @@ export default function Home() {
             {/* Search Results */}
             {hasSearched && (
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-                  Search Results
-                </h2>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {comprehensiveScanResults ? 'Comprehensive Scan Results' : 'Search Results'}
+                  </h2>
+                  {comprehensiveScanResults && (
+                    <div className="text-sm text-gray-600 dark:text-gray-300">
+                      Scanned {comprehensiveScanResults.total_scanned} sites • 
+                      Found data on {comprehensiveScanResults.brokers_with_data} brokers • 
+                      {comprehensiveScanResults.total_data_points} data points
+                    </div>
+                  )}
+                </div>
                 
-                {isSearching ? (
+                {(isSearching || isComprehensiveScanning) ? (
                   <div className="text-center py-8">
                     <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
                     <p className="text-gray-600 dark:text-gray-300">
-                      Searching data broker websites...
+                      {isComprehensiveScanning ? 
+                        'Scanning public broker websites comprehensively...' : 
+                        'Searching data broker websites...'
+                      }
                     </p>
+                    {isComprehensiveScanning && (
+                      <p className="text-sm text-gray-500 mt-2">
+                        This may take a few minutes as we search across multiple sites
+                      </p>
+                    )}
                   </div>
                 ) : searchResults.length > 0 ? (
                   <div className="grid gap-4">
@@ -437,18 +600,25 @@ export default function Home() {
                             </div>
                           </div>
                           
-                          <div className="flex items-center justify-between">
-                            <Button variant="outline" size="sm" asChild>
-                              <a 
-                                href={result.url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="flex items-center"
-                              >
-                                Visit Site
-                                <ExternalLink className="h-3 w-3 ml-1" />
-                              </a>
-                            </Button>
+                                                      <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <Button variant="outline" size="sm" asChild>
+                                <a 
+                                  href={result.url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="flex items-center"
+                                >
+                                  Visit Site
+                                  <ExternalLink className="h-3 w-3 ml-1" />
+                                </a>
+                              </Button>
+                              {result.scanMethod && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {result.scanMethod === 'api' ? 'API' : 'Scraped'}
+                                </Badge>
+                              )}
+                            </div>
                             <Button 
                               variant="destructive" 
                               size="sm"
@@ -476,6 +646,189 @@ export default function Home() {
                 )}
               </div>
             )}
+          </TabsContent>
+
+          {/* Comprehensive Scan Tab */}
+          <TabsContent value="comprehensive">
+            <Alert className="mb-8">
+              <Shield className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Comprehensive Public Broker Scanning:</strong> This feature automatically searches across 
+                {dataSources.length || '17+'} major public-facing data broker and people-search sites including 
+                Spokeo, WhitePages, Radaris, MyLife, and many others. The system performs automated searches 
+                using your provided data to see if your profile appears on hundreds of these sites.
+              </AlertDescription>
+            </Alert>
+
+            <div className="grid gap-6">
+              {/* Scan Configuration */}
+              <Card className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Shield className="h-5 w-5 mr-2" />
+                    Public Broker Site Scanning
+                  </CardTitle>
+                  <CardDescription>
+                    Automated scanning across major data broker and people-search websites
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleComprehensiveScan} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="scan-fullName">Full Name *</Label>
+                        <Input
+                          id="scan-fullName"
+                          name="fullName"
+                          type="text"
+                          placeholder="Enter your full name"
+                          value={formData.fullName}
+                          onChange={handleInputChange}
+                          required
+                          className="mt-1"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="scan-phone">Phone Number</Label>
+                        <Input
+                          id="scan-phone"
+                          name="phone"
+                          type="tel"
+                          placeholder="Enter your phone number"
+                          value={formData.phone}
+                          onChange={handleInputChange}
+                          className="mt-1"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="scan-email">Email Address</Label>
+                        <Input
+                          id="scan-email"
+                          name="email"
+                          type="email"
+                          placeholder="Enter your email address"
+                          value={formData.email}
+                          onChange={handleInputChange}
+                          className="mt-1"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="scan-address">Address (Optional)</Label>
+                        <Input
+                          id="scan-address"
+                          name="address"
+                          type="text"
+                          placeholder="Enter your address"
+                          value={formData.address || ''}
+                          onChange={handleInputChange}
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border">
+                      <h4 className="font-medium text-gray-900 dark:text-white mb-2">
+                        Scanning Scope
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <div className="font-medium text-red-600">High Priority</div>
+                          <div className="text-gray-600 dark:text-gray-300">
+                            Comprehensive sites with detailed profiles<br/>
+                            (Spokeo, MyLife, InstantCheckmate, etc.)
+                          </div>
+                        </div>
+                        <div>
+                          <div className="font-medium text-yellow-600">Medium Priority</div>
+                          <div className="text-gray-600 dark:text-gray-300">
+                            Public record aggregators<br/>
+                            (WhitePages, Radaris, PeopleFinders, etc.)
+                          </div>
+                        </div>
+                        <div>
+                          <div className="font-medium text-green-600">Directory Services</div>
+                          <div className="text-gray-600 dark:text-gray-300">
+                            Basic directory listings<br/>
+                            (YellowPages, AnyWho, etc.)
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <Button 
+                      type="submit" 
+                      className="w-full" 
+                      disabled={isComprehensiveScanning || !user}
+                      size="lg"
+                    >
+                      {isComprehensiveScanning ? (
+                        <>
+                          <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                          Scanning {dataSources.length || '17+'} Public Broker Sites...
+                        </>
+                      ) : (
+                        <>
+                          <Shield className="h-5 w-5 mr-2" />
+                          Start Comprehensive Scan
+                        </>
+                      )}
+                    </Button>
+                    
+                    {!user && (
+                      <Alert>
+                        <AlertDescription>
+                          Please sign in to access comprehensive scanning features. This will allow you to 
+                          save your scan results and track removal requests across all discovered data brokers.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </form>
+                </CardContent>
+              </Card>
+
+              {/* Scan Results Summary */}
+              {comprehensiveScanResults && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Scan Summary</CardTitle>
+                    <CardDescription>
+                      Comprehensive scan completed on {new Date().toLocaleDateString()}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-600">
+                          {comprehensiveScanResults.total_scanned}
+                        </div>
+                        <div className="text-sm text-gray-600">Sites Scanned</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-orange-600">
+                          {comprehensiveScanResults.brokers_with_data}
+                        </div>
+                        <div className="text-sm text-gray-600">Found Data</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-red-600">
+                          {comprehensiveScanResults.total_data_points}
+                        </div>
+                        <div className="text-sm text-gray-600">Data Points</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          {Math.max(0, comprehensiveScanResults.total_scanned - comprehensiveScanResults.brokers_with_data)}
+                        </div>
+                        <div className="text-sm text-gray-600">Clean Sites</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </TabsContent>
 
           {/* History Tab */}

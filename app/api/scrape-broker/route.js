@@ -4,19 +4,48 @@ export async function POST(request) {
   try {
     const { broker, search_params } = await request.json()
 
-    // Validate required fields
-    if (!broker || !search_params) {
+    // Enhanced validation with detailed error messages
+    if (!broker) {
+      console.error('❌ Missing broker object in request')
       return NextResponse.json(
-        { error: 'Missing required fields: broker, search_params' },
+        { error: 'Missing required field: broker' },
+        { status: 400 }
+      )
+    }
+
+    if (!search_params) {
+      console.error('❌ Missing search_params object in request')
+      return NextResponse.json(
+        { error: 'Missing required field: search_params' },
+        { status: 400 }
+      )
+    }
+
+    if (!broker.name) {
+      console.error('❌ Missing broker.name in request')
+      return NextResponse.json(
+        { error: 'Missing required field: broker.name' },
         { status: 400 }
       )
     }
 
     const { fullName, phone, email } = search_params
 
+    if (!fullName || fullName.trim() === '') {
+      console.error('❌ Missing or empty fullName in search_params')
+      return NextResponse.json(
+        { error: 'Missing required field: search_params.fullName' },
+        { status: 400 }
+      )
+    }
+
     console.log('🔍 Real scraping initiated for:', {
       broker: broker.name,
-      search: { fullName, phone, email }
+      search: { 
+        fullName: fullName ? '✅' : '❌', 
+        phone: phone ? '✅' : '❌', 
+        email: email ? '✅' : '❌' 
+      }
     })
 
     // Perform actual web scraping based on broker
