@@ -130,6 +130,30 @@ export async function POST(request) {
 }
 
 /**
+ * Helper function to format address objects or strings
+ */
+function formatAddress(address) {
+  if (!address) return ''
+  
+  // If it's already a string, return it
+  if (typeof address === 'string') return address
+  
+  // If it's an object, format it as a readable address
+  if (typeof address === 'object' && address !== null) {
+    const parts = []
+    
+    if (address.streetAddress) parts.push(address.streetAddress)
+    if (address.addressLocality) parts.push(address.addressLocality)
+    if (address.addressRegion) parts.push(address.addressRegion)
+    if (address.postalCode) parts.push(address.postalCode)
+    
+    return parts.join(', ')
+  }
+  
+  return String(address)
+}
+
+/**
  * Transform APIFY Skip Trace results to our standard format
  * APIFY returns data with column names like 'First Name', 'Last Name', 'Age', etc.
  */
@@ -212,7 +236,15 @@ function transformApifyResults(items, searchedName, runId = null) {
     // Extract previous addresses
     if (hasValue(item['Previous Addresses'])) {
       if (!dataFound.includes('Address History')) dataFound.push('Address History')
-      record.previous_addresses = item['Previous Addresses']
+      
+      const prevAddresses = item['Previous Addresses']
+      if (Array.isArray(prevAddresses)) {
+        // If it's an array of addresses, format each one
+        record.previous_addresses = prevAddresses.map(addr => formatAddress(addr))
+      } else {
+        // If it's a single address (string or object), format it
+        record.previous_addresses = [formatAddress(prevAddresses)]
+      }
     }
 
     // Extract email information

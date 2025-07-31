@@ -25,6 +25,28 @@ import { useAuth } from '@/lib/contexts/AuthContext'
 import { useDataBroker } from '@/lib/hooks/useDataBroker'
 import Image from 'next/image'
 
+// Helper function to format address objects or strings
+const formatAddress = (address) => {
+  if (!address) return ''
+  
+  // If it's already a string, return it
+  if (typeof address === 'string') return address
+  
+  // If it's an object, format it as a readable address
+  if (typeof address === 'object') {
+    const parts = []
+    
+    if (address.streetAddress) parts.push(address.streetAddress)
+    if (address.addressLocality) parts.push(address.addressLocality)
+    if (address.addressRegion) parts.push(address.addressRegion)
+    if (address.postalCode) parts.push(address.postalCode)
+    
+    return parts.join(', ')
+  }
+  
+  return String(address)
+}
+
 export default function Home() {
   const { user, signIn, signUp, signOut, loading: authLoading } = useAuth()
   const { 
@@ -631,7 +653,7 @@ export default function Home() {
                                   {result.details.current_address && (
                                     <div className="md:col-span-2">
                                       <span className="font-medium text-gray-600 dark:text-gray-400">Address:</span>
-                                      <span className="ml-2 text-gray-900 dark:text-white">{result.details.current_address}</span>
+                                      <span className="ml-2 text-gray-900 dark:text-white">{formatAddress(result.details.current_address)}</span>
                                     </div>
                                   )}
                                   {result.details.birth_date && (
@@ -710,7 +732,7 @@ export default function Home() {
                                       <span className="ml-2 text-gray-900 dark:text-white">
                                         {typeof result.details.previous_addresses === 'string' 
                                           ? result.details.previous_addresses
-                                          : result.details.previous_addresses[0]
+                                          : formatAddress(result.details.previous_addresses[0])
                                         }
                                       </span>
                                       {Array.isArray(result.details.previous_addresses) && result.details.previous_addresses.length > 1 && (
