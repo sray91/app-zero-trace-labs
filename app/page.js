@@ -23,7 +23,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/lib/contexts/AuthContext'
 import { useDataBroker } from '@/lib/hooks/useDataBroker'
-import Logo from '@/components/Logo'
+import Image from 'next/image'
 
 export default function Home() {
   const { user, signIn, signUp, signOut, loading: authLoading } = useAuth()
@@ -160,10 +160,16 @@ export default function Home() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="mb-6 animate-pulse">
-            <Logo size="large" showText={false} />
+            <Image
+              src="/zero-trace-labs-logo.png"
+              alt="Zero Trace Labs"
+              width={120}
+              height={120}
+              className="mx-auto rounded-xl"
+            />
           </div>
           <Loader2 className="h-6 w-6 animate-spin mx-auto mb-4 text-blue-600" />
           <p className="text-gray-600 dark:text-gray-300 font-medium">Loading...</p>
@@ -173,25 +179,22 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-white dark:bg-gray-900">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center">
-              <Logo size="medium" showText={false} animate={true} className="mr-4" />
-              <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-600 bg-clip-text text-transparent dark:from-white dark:via-blue-200 dark:to-indigo-300">
-                  Data Broker Search
-                </h1>
-                <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
-                  Powered by Zero Trace Labs
-                </p>
-              </div>
-            </div>
-            
-            {/* Auth Section */}
-            <div className="flex items-center space-x-4">
+          <div className="flex items-center justify-center mb-6">
+            <Image
+              src="/zero-trace-labs-logo.png"
+              alt="Zero Trace Labs"
+              width={120}
+              height={120}
+              className="rounded-xl hover:scale-105 transition-transform duration-200"
+            />
+          </div>
+          
+          {/* Auth Section */}
+          <div className="flex items-center justify-center space-x-4 mb-4">
               {user ? (
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-2">
@@ -278,7 +281,6 @@ export default function Home() {
                   </DialogContent>
                 </Dialog>
               )}
-            </div>
           </div>
           
           <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
@@ -316,7 +318,7 @@ export default function Home() {
             </Alert>
 
             {/* Search Form */}
-            <Card className="mb-8">
+            <Card className="mb-8 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20">
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Search className="h-5 w-5 mr-2" />
@@ -406,7 +408,7 @@ export default function Home() {
                 ) : searchResults.length > 0 ? (
                   <div className="grid gap-4">
                     {searchResults.map((result) => (
-                      <Card key={result.id} className="hover:shadow-lg transition-shadow">
+                      <Card key={result.id} className="hover:shadow-lg transition-shadow bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20">
                         <CardContent className="p-6">
                           <div className="flex items-start justify-between mb-4">
                             <div>
@@ -460,7 +462,7 @@ export default function Home() {
                     ))}
                   </div>
                 ) : (
-                  <Card>
+                  <Card className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20">
                     <CardContent className="text-center py-8">
                       <Shield className="h-12 w-12 text-green-500 mx-auto mb-4" />
                       <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
@@ -478,7 +480,7 @@ export default function Home() {
 
           {/* History Tab */}
           <TabsContent value="history">
-            <Card>
+            <Card className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20">
               <CardHeader>
                 <CardTitle>Search History</CardTitle>
                 <CardDescription>
@@ -518,7 +520,7 @@ export default function Home() {
 
           {/* Requests Tab */}
           <TabsContent value="requests">
-            <Card>
+            <Card className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20">
               <CardHeader>
                 <CardTitle>Removal Requests</CardTitle>
                 <CardDescription>
