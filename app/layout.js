@@ -5,10 +5,16 @@ import { AuthProvider } from '@/lib/contexts/AuthContext'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
-  title: 'Data Broker Search',
-  description: 'Discover where your personal information appears online across data broker websites. Take control of your digital privacy.',
+  title: 'Zero Trace Labs - Data Broker Search & Privacy Protection',
+  description: 'Professional data broker monitoring and removal service. Discover where your personal information appears online and take control of your digital privacy with automated removal requests.',
   icons: {
-    icon: '/zero-trace-labs-logo.png',
+    icon: '/favicon.ico',
+    apple: '/favicon.ico',
+  },
+  openGraph: {
+    title: 'Zero Trace Labs - Data Privacy Protection',
+    description: 'Professional data broker monitoring and removal service',
+    images: ['/zero-trace-labs-logo.png'],
   }
 }
 
