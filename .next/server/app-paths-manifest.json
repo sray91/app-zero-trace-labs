@@ -1,4 +1,0 @@
-{
-  "/api/scrape-broker/route": "app/api/scrape-broker/route.js",
-  "/page": "app/page.js"
-}

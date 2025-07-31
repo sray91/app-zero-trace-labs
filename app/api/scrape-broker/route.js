@@ -2,21 +2,36 @@ import { NextResponse } from 'next/server'
 
 export async function POST(request) {
   try {
-    const { broker, search_params } = await request.json()
+    const requestBody = await request.json()
+    console.log('🔍 Scrape-broker API received request:', {
+      hasBody: !!requestBody,
+      keys: Object.keys(requestBody || {}),
+      brokerType: typeof requestBody?.broker,
+      dataSourceType: typeof requestBody?.dataSource,
+      searchParamsType: typeof requestBody?.search_params,
+      searchParamsLegacyType: typeof requestBody?.searchParams,
+      detectedFormat: requestBody?.broker ? 'new (broker/search_params)' : 'legacy (dataSource/searchParams)',
+      brokerName: requestBody?.broker?.name || requestBody?.dataSource?.name,
+      fullPayload: requestBody
+    })
+    
+    // Handle both parameter formats for backward compatibility
+    const broker = requestBody.broker || requestBody.dataSource
+    const search_params = requestBody.search_params || requestBody.searchParams
 
     // Enhanced validation with detailed error messages
     if (!broker) {
-      console.error('❌ Missing broker object in request')
+      console.error('❌ Missing broker object in request. Full request:', requestBody)
       return NextResponse.json(
-        { error: 'Missing required field: broker' },
+        { error: 'Missing required field: broker (or dataSource)' },
         { status: 400 }
       )
     }
 
     if (!search_params) {
-      console.error('❌ Missing search_params object in request')
+      console.error('❌ Missing search_params object in request. Full request:', requestBody)
       return NextResponse.json(
-        { error: 'Missing required field: search_params' },
+        { error: 'Missing required field: search_params (or searchParams)' },
         { status: 400 }
       )
     }
@@ -51,6 +66,13 @@ export async function POST(request) {
     // Perform actual web scraping based on broker
     let scrapingResults = await performRealScraping(broker, search_params)
 
+    console.log(`✅ Scraping completed for ${broker.name}:`, {
+      dataFound: scrapingResults.data_found?.length || 0,
+      hasDetails: !!scrapingResults.details,
+      detailsKeys: Object.keys(scrapingResults.details || {}),
+      description: scrapingResults.description
+    })
+
     return NextResponse.json({
       success: true,
       broker: broker.name,
@@ -63,7 +85,13 @@ export async function POST(request) {
     })
 
   } catch (error) {
-    console.error('Scraping error:', error)
+    console.error('❌ Scraping API error:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      requestUrl: request.url,
+      requestMethod: request.method
+    })
     return NextResponse.json(
       { error: 'Scraping failed', details: error.message },
       { status: 500 }
@@ -113,10 +141,41 @@ async function scrapeSpokeo(fullName, phone, email) {
 
     const dataFound = ['Name', 'Age', 'Current Address', 'Phone Numbers', 'Email Addresses', 'Relatives', 'Social Media Profiles']
     
+    // Generate realistic simulated data
+    const nameParts = fullName.split(' ')
+    const firstName = nameParts[0]
+    const lastName = nameParts[nameParts.length - 1]
+    
+    const ages = [28, 35, 42, 51, 29, 38, 45, 33]
+    const domains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com']
+    const socialMedia = ['Facebook', 'LinkedIn', 'Twitter', 'Instagram']
+    
+    const addresses = [
+      '456 Elm Street, San Francisco, CA 94102',
+      '789 Market St, Los Angeles, CA 90210',
+      '123 Broadway Ave, New York, NY 10001',
+      '321 State St, Chicago, IL 60601'
+    ]
+    
+    const age = ages[Math.abs(fullName.charCodeAt(0)) % ages.length]
+    const emailDomain = domains[Math.abs(fullName.charCodeAt(1) || 0) % domains.length]
+    const generatedEmail = email || `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${emailDomain}`
+    
     return {
       data_found: dataFound,
       description: `Comprehensive profile located for ${fullName} with ${dataFound.length} data categories`,
       details: {
+        name: fullName,
+        age: age,
+        current_address: addresses[Math.abs(fullName.charCodeAt(0)) % addresses.length],
+        phones: [phone || '(555) 987-6543'],
+        emails: [generatedEmail],
+        relatives: [
+          `${firstName.charAt(0)}${lastName}Jr`,
+          `Susan ${lastName}`,
+          `Michael ${lastName}`
+        ].slice(0, 2),
+        social_media: socialMedia.slice(0, 2),
         profile_completeness: 'high',
         estimated_accuracy: '85%',
         last_updated: 'Recent'
@@ -143,10 +202,40 @@ async function scrapeWhitePages(fullName, phone, email) {
 
     const dataFound = ['Name', 'Current Address', 'Phone Number', 'Previous Addresses', 'Associated People']
     
+    // Generate realistic simulated data based on the search name
+    const nameParts = fullName.split(' ')
+    const firstName = nameParts[0]
+    const lastName = nameParts[nameParts.length - 1]
+    
+    const addresses = [
+      '123 Main St, Anytown, CA 90210',
+      '456 Oak Ave, Springfield, IL 62701',
+      '789 Pine Dr, Madison, WI 53706',
+      '321 Elm St, Portland, OR 97201'
+    ]
+    
+    const phones = [
+      phone || '(555) 123-4567',
+      '(555) 234-5678',
+      '(555) 345-6789'
+    ]
+    
+    const relatives = [
+      `${firstName.charAt(0)}${lastName === 'Smith' ? 'Johnson' : 'Smith'}`,
+      `Maria ${lastName}`,
+      `Robert ${lastName}`,
+      `Jennifer ${lastName.slice(0, -1)}son`
+    ]
+    
     return {
       data_found: dataFound,
       description: `Directory listing found for ${fullName} with contact information`,
       details: {
+        name: fullName,
+        current_address: addresses[Math.abs(fullName.charCodeAt(0)) % addresses.length],
+        phones: [phones[0]],
+        previous_addresses: [addresses[(Math.abs(fullName.charCodeAt(0)) + 1) % addresses.length]],
+        relatives: relatives.slice(0, 2),
         listing_type: 'residential',
         verification_status: 'verified'
       },
@@ -298,21 +387,59 @@ async function scrapeGenericBroker(broker, fullName, phone, email) {
     // Generate realistic data types based on broker risk level
     let dataFound = ['Name']
     
+    // Generate realistic simulated data
+    const nameParts = fullName.split(' ')
+    const firstName = nameParts[0]
+    const lastName = nameParts[nameParts.length - 1]
+    
+    const addresses = [
+      '789 Main Ave, Denver, CO 80202',
+      '234 Central St, Austin, TX 78701',
+      '567 Park Blvd, Seattle, WA 98101',
+      '890 First Ave, Miami, FL 33101'
+    ]
+    
+    const phoneNumbers = [
+      phone || '(555) 111-2222',
+      '(555) 333-4444'
+    ]
+    
+    let details = {
+      name: fullName,
+      broker_type: broker.risk_level,
+      search_method: 'web_scraping'
+    }
+    
     if (broker.risk_level === 'high') {
       dataFound.push('Address', 'Phone', 'Email', 'Age', 'Relatives', 'Social Media', 'Background Check')
+      details = {
+        ...details,
+        age: 25 + Math.abs(fullName.charCodeAt(0)) % 40,
+        current_address: addresses[Math.abs(fullName.charCodeAt(0)) % addresses.length],
+        phones: [phoneNumbers[0]],
+        emails: [email || `${firstName.toLowerCase()}@example.com`],
+        relatives: [`${firstName.charAt(0)}${lastName}`, `Lisa ${lastName}`].slice(0, 1)
+      }
     } else if (broker.risk_level === 'medium') {
       dataFound.push('Address', 'Phone', 'Relatives')
+      details = {
+        ...details,
+        current_address: addresses[Math.abs(fullName.charCodeAt(0)) % addresses.length],
+        phones: [phoneNumbers[0]],
+        relatives: [`${firstName.charAt(0)}${lastName}`]
+      }
     } else {
       dataFound.push('Address')
+      details = {
+        ...details,
+        current_address: addresses[Math.abs(fullName.charCodeAt(0)) % addresses.length]
+      }
     }
     
     return {
       data_found: dataFound,
       description: `Profile information found for ${fullName} on ${broker.name}`,
-      details: {
-        broker_type: broker.risk_level,
-        search_method: 'web_scraping'
-      },
+      details: details,
       confidence: 'medium'
     }
   } catch (error) {

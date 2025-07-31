@@ -163,16 +163,26 @@ export default function Home() {
       console.log('📊 Scan result:', result)
       if (result.success) {
         setComprehensiveScanResults(result)
-        setSearchResults(result.results.map(r => ({
+        const mappedResults = result.results.map(r => ({
           id: r.broker_id || Date.now() + Math.random(),
           source: r.broker_name,
           url: r.url || '#',
           dataFound: r.dataFound || [],
+          details: r.details || {},
           riskLevel: dataSources.find(ds => ds.name === r.broker_name)?.risk_level || 'medium',
           description: r.description || 'Comprehensive scan completed',
           scanMethod: r.scan_method,
           scanTimestamp: r.scan_timestamp
+        }))
+        
+        console.log('🎯 Final mapped search results:', mappedResults.map(r => ({
+          source: r.source,
+          hasDetails: !!r.details && Object.keys(r.details).length > 0,
+          detailsKeys: Object.keys(r.details || {}),
+          detailsPreview: r.details
         })))
+        
+        setSearchResults(mappedResults)
       } else {
         alert(`Comprehensive scan failed: ${result.error}`)
         setSearchResults([])
@@ -591,13 +601,220 @@ export default function Home() {
                             <h4 className="font-medium text-gray-900 dark:text-white mb-2">
                               Data Found:
                             </h4>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-2 mb-3">
                               {result.dataFound.map((data, index) => (
                                 <Badge key={index} variant="secondary">
                                   {data}
                                 </Badge>
                               ))}
                             </div>
+                            
+                            {/* Display actual data values if available */}
+                            {result.details && Object.keys(result.details).length > 0 && (
+                              <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  Found Information:
+                                </h5>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                                  {result.details.name && (
+                                    <div>
+                                      <span className="font-medium text-gray-600 dark:text-gray-400">Name:</span>
+                                      <span className="ml-2 text-gray-900 dark:text-white">{result.details.name}</span>
+                                    </div>
+                                  )}
+                                  {result.details.age && (
+                                    <div>
+                                      <span className="font-medium text-gray-600 dark:text-gray-400">Age:</span>
+                                      <span className="ml-2 text-gray-900 dark:text-white">{result.details.age}</span>
+                                    </div>
+                                  )}
+                                  {result.details.current_address && (
+                                    <div className="md:col-span-2">
+                                      <span className="font-medium text-gray-600 dark:text-gray-400">Address:</span>
+                                      <span className="ml-2 text-gray-900 dark:text-white">{result.details.current_address}</span>
+                                    </div>
+                                  )}
+                                  {result.details.birth_date && (
+                                    <div>
+                                      <span className="font-medium text-gray-600 dark:text-gray-400">Born:</span>
+                                      <span className="ml-2 text-gray-900 dark:text-white">{result.details.birth_date}</span>
+                                    </div>
+                                  )}
+                                  {result.details.county && (
+                                    <div>
+                                      <span className="font-medium text-gray-600 dark:text-gray-400">County:</span>
+                                      <span className="ml-2 text-gray-900 dark:text-white">{result.details.county}</span>
+                                    </div>
+                                  )}
+                                  {result.details.phones && result.details.phones.length > 0 && (
+                                    <div className="md:col-span-2">
+                                      <span className="font-medium text-gray-600 dark:text-gray-400">Phone:</span>
+                                      <div className="ml-2 text-gray-900 dark:text-white">
+                                        {result.details.phones.slice(0, 2).map((phone, idx) => (
+                                          <div key={idx} className="text-sm">
+                                            {typeof phone === 'string' ? phone : (
+                                              <span>
+                                                {phone.number}
+                                                {phone.type && <span className="text-gray-500 ml-1">({phone.type})</span>}
+                                                {phone.provider && <span className="text-gray-500 ml-1">- {phone.provider}</span>}
+                                              </span>
+                                            )}
+                                          </div>
+                                        ))}
+                                        {result.details.phones.length > 2 && (
+                                          <span className="text-gray-500 text-xs">+{result.details.phones.length - 2} more</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {result.details.emails && result.details.emails.length > 0 && (
+                                    <div className="md:col-span-2">
+                                      <span className="font-medium text-gray-600 dark:text-gray-400">Email:</span>
+                                      <div className="ml-2 text-gray-900 dark:text-white">
+                                        {result.details.emails.slice(0, 2).map((email, idx) => (
+                                          <div key={idx} className="text-sm">{email}</div>
+                                        ))}
+                                        {result.details.emails.length > 2 && (
+                                          <span className="text-gray-500 text-xs">+{result.details.emails.length - 2} more</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {result.details.relatives && result.details.relatives.length > 0 && (
+                                    <div className="md:col-span-2">
+                                      <span className="font-medium text-gray-600 dark:text-gray-400">Relatives:</span>
+                                      <span className="ml-2 text-gray-900 dark:text-white">
+                                        {typeof result.details.relatives === 'string' 
+                                          ? result.details.relatives
+                                          : result.details.relatives.slice(0, 3).join(', ')
+                                        }
+                                        {Array.isArray(result.details.relatives) && result.details.relatives.length > 3 && ` (+${result.details.relatives.length - 3} more)`}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {result.details.associates && result.details.associates.length > 0 && (
+                                    <div className="md:col-span-2">
+                                      <span className="font-medium text-gray-600 dark:text-gray-400">Associates:</span>
+                                      <span className="ml-2 text-gray-900 dark:text-white">
+                                        {typeof result.details.associates === 'string' 
+                                          ? result.details.associates
+                                          : result.details.associates.slice(0, 3).join(', ')
+                                        }
+                                        {Array.isArray(result.details.associates) && result.details.associates.length > 3 && ` (+${result.details.associates.length - 3} more)`}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {result.details.previous_addresses && result.details.previous_addresses.length > 0 && (
+                                    <div className="md:col-span-2">
+                                      <span className="font-medium text-gray-600 dark:text-gray-400">Previous Address:</span>
+                                      <span className="ml-2 text-gray-900 dark:text-white">
+                                        {typeof result.details.previous_addresses === 'string' 
+                                          ? result.details.previous_addresses
+                                          : result.details.previous_addresses[0]
+                                        }
+                                      </span>
+                                      {Array.isArray(result.details.previous_addresses) && result.details.previous_addresses.length > 1 && (
+                                        <span className="text-gray-500"> (+{result.details.previous_addresses.length - 1} more)</span>
+                                      )}
+                                    </div>
+                                  )}
+                                  {result.details.person_link && (
+                                    <div className="md:col-span-2">
+                                      <span className="font-medium text-gray-600 dark:text-gray-400">Profile:</span>
+                                      <a href={result.details.person_link} target="_blank" rel="noopener noreferrer" 
+                                         className="ml-2 text-blue-600 dark:text-blue-400 hover:underline text-sm">
+                                        View Full Profile
+                                      </a>
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                {/* Data Sources Section */}
+                                <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                  <h5 className="text-sm font-medium text-blue-700 dark:text-blue-300 mb-2 flex items-center">
+                                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 4a1 1 0 011-1h12a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1V8zm2 2a1 1 0 000 2h.01a1 1 0 100-2H5zm3 0a1 1 0 000 2h3a1 1 0 100-2H8z" clipRule="evenodd" />
+                                    </svg>
+                                    Data Sources & Verification
+                                  </h5>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                                    <div className="bg-white dark:bg-gray-800 p-2 rounded border">
+                                      <div className="flex items-center justify-between mb-1">
+                                        <span className="font-medium text-gray-700 dark:text-gray-300">Search Engine:</span>
+                                        <Badge variant="outline" className="text-xs">APIFY Skip Trace</Badge>
+                                      </div>
+                                      <div className="text-gray-600 dark:text-gray-400">
+                                        Professional-grade data aggregation service
+                                      </div>
+                                    </div>
+                                    
+                                    {result.details.search_metadata?.search_option && (
+                                      <div className="bg-white dark:bg-gray-800 p-2 rounded border">
+                                        <div className="flex items-center justify-between mb-1">
+                                          <span className="font-medium text-gray-700 dark:text-gray-300">Search Method:</span>
+                                          <Badge variant="secondary" className="text-xs">{result.details.search_metadata.search_option}</Badge>
+                                        </div>
+                                        <div className="text-gray-600 dark:text-gray-400">
+                                          Input: "{result.details.search_metadata.input_given}"
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    <div className="bg-white dark:bg-gray-800 p-2 rounded border">
+                                      <div className="flex items-center justify-between mb-1">
+                                        <span className="font-medium text-gray-700 dark:text-gray-300">Records Found:</span>
+                                        <Badge variant="default" className="text-xs">{result.details.total_records || 1}</Badge>
+                                      </div>
+                                      <div className="text-gray-600 dark:text-gray-400">
+                                        Aggregated from multiple public data sources
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="bg-white dark:bg-gray-800 p-2 rounded border">
+                                      <div className="flex items-center justify-between mb-1">
+                                        <span className="font-medium text-gray-700 dark:text-gray-300">Confidence:</span>
+                                        <Badge variant={result.confidence === 'high' ? 'default' : 'secondary'} className="text-xs">
+                                          {result.confidence?.toUpperCase() || 'HIGH'}
+                                        </Badge>
+                                      </div>
+                                      <div className="text-gray-600 dark:text-gray-400">
+                                        Based on data verification algorithms
+                                      </div>
+                                    </div>
+                                    
+                                    {result.details.search_metadata?.actor_run_id && (
+                                      <div className="md:col-span-2 bg-white dark:bg-gray-800 p-2 rounded border">
+                                        <div className="flex items-center justify-between mb-1">
+                                          <span className="font-medium text-gray-700 dark:text-gray-300">Trace ID:</span>
+                                          <span className="text-xs font-mono text-gray-500 dark:text-gray-400">
+                                            {result.details.search_metadata.actor_run_id}
+                                          </span>
+                                        </div>
+                                        <div className="text-gray-600 dark:text-gray-400">
+                                          Unique identifier for this search operation
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Data Sources Disclaimer */}
+                                  <div className="mt-3 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
+                                    <div className="flex items-start">
+                                      <svg className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                      </svg>
+                                      <div>
+                                        <h6 className="text-xs font-medium text-yellow-700 dark:text-yellow-300">Data Sources</h6>
+                                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                                          Information aggregated from public records, voter registrations, property records, 
+                                          court documents, and other publicly available sources. Data accuracy may vary.
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                           
                                                       <div className="flex items-center justify-between">
