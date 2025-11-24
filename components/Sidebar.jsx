@@ -88,32 +88,25 @@ export function Sidebar() {
     <>
       {/* Logo Section */}
       <div className={cn(
-        "flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800",
+        "flex items-center justify-between px-4 py-3 border-b border-border",
         collapsed ? "flex-col space-y-2" : ""
       )}>
         <div className={cn(
-          "flex items-center space-x-3",
-          collapsed && "flex-col space-x-0 space-y-2"
+          "flex items-center justify-center",
+          !collapsed && "w-full"
         )}>
-          <div className="relative w-10 h-10 flex-shrink-0">
+          <div className={cn(
+            "relative flex-shrink-0",
+            collapsed ? "w-12 h-12" : "w-32 h-32"
+          )}>
             <Image
-              src="/zero-trace-labs-logo.png"
-              alt="Zero Trace Labs"
-              width={40}
-              height={40}
-              className="rounded-lg"
+              src="/zero-trace-labs-logo-dark.png"
+              alt="0TraceLabs"
+              width={collapsed ? 48 : 128}
+              height={collapsed ? 48 : 128}
+              className="rounded-xl"
             />
           </div>
-          {!collapsed && (
-            <div className="flex flex-col">
-              <span className="font-bold text-lg text-gray-900 dark:text-white">
-                Zero Trace
-              </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                Privacy Protection
-              </span>
-            </div>
-          )}
         </div>
 
         {/* Desktop Collapse Toggle */}
@@ -161,9 +154,9 @@ export function Sidebar() {
               }}
               className={cn(
                 "flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all",
-                "hover:bg-gray-100 dark:hover:bg-gray-800",
-                isActive && "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400",
-                !isActive && "text-gray-700 dark:text-gray-300",
+                "hover:bg-nuclear-blue/10",
+                isActive && "bg-nuclear-blue/10 text-nuclear-blue border border-nuclear-blue/20",
+                !isActive && "text-foreground",
                 isDisabled && "opacity-50 cursor-not-allowed",
                 collapsed && "justify-center"
               )}
@@ -171,13 +164,13 @@ export function Sidebar() {
             >
               <item.icon className={cn(
                 "h-5 w-5 flex-shrink-0",
-                isActive && "text-blue-600 dark:text-blue-400"
+                isActive && "text-nuclear-blue"
               )} />
               {!collapsed && (
                 <span className="flex-1">{item.name}</span>
               )}
               {!collapsed && isDisabled && (
-                <span className="text-xs text-gray-400">Sign in</span>
+                <span className="text-xs text-muted-foreground">Sign in</span>
               )}
             </Link>
           )
@@ -186,7 +179,7 @@ export function Sidebar() {
 
       {/* User Section */}
       <div className={cn(
-        "border-t border-gray-200 dark:border-gray-800 p-4",
+        "border-t border-border p-4",
         collapsed ? "space-y-2" : ""
       )}>
         {user ? (
@@ -195,16 +188,16 @@ export function Sidebar() {
             collapsed && "flex-col space-x-0 space-y-2"
           )}>
             <Avatar className="h-9 w-9 flex-shrink-0">
-              <AvatarFallback className="bg-blue-600 text-white text-sm">
+              <AvatarFallback className="bg-nuclear-blue text-white text-sm font-outfit">
                 {getInitials(user.email)}
               </AvatarFallback>
             </Avatar>
             {!collapsed && (
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                <p className="text-sm font-medium text-foreground truncate">
                   {user.email}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-muted-foreground">
                   Free Plan
                 </p>
               </div>
@@ -229,7 +222,7 @@ export function Sidebar() {
             collapsed && "flex flex-col items-center"
           )}>
             <p className={cn(
-              "text-sm text-gray-600 dark:text-gray-400 mb-2",
+              "text-sm text-muted-foreground mb-2",
               collapsed && "hidden"
             )}>
               Sign in to access all features
@@ -237,7 +230,7 @@ export function Sidebar() {
             <Button
               variant="default"
               size="sm"
-              className="w-full"
+              className="w-full btn-nuclear"
               onClick={() => {
                 // Trigger custom event that the page can listen to
                 window.dispatchEvent(new CustomEvent('openAuthDialog'))
@@ -262,7 +255,7 @@ export function Sidebar() {
         variant="ghost"
         size="icon"
         onClick={() => setMobileOpen(true)}
-        className="fixed top-4 left-4 z-40 lg:hidden bg-white dark:bg-gray-900 shadow-md"
+        className="fixed top-4 left-4 z-40 lg:hidden bg-card shadow-md border border-border"
       >
         <Menu className="h-5 w-5" />
       </Button>
@@ -278,7 +271,7 @@ export function Sidebar() {
       {/* Mobile Sidebar */}
       <aside
         className={cn(
-          "fixed top-0 left-0 z-50 h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-transform duration-300 lg:hidden",
+          "fixed top-0 left-0 z-50 h-full bg-card border-r border-border transition-transform duration-300 lg:hidden",
           "w-64 flex flex-col",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
@@ -289,7 +282,7 @@ export function Sidebar() {
       {/* Desktop Sidebar */}
       <aside
         className={cn(
-          "hidden lg:flex lg:flex-col h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-all duration-300 sticky top-0",
+          "hidden lg:flex lg:flex-col h-screen bg-card border-r border-border transition-all duration-300 sticky top-0",
           collapsed ? "w-20" : "w-64"
         )}
       >

@@ -83,32 +83,32 @@ export default function Home() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-deep-void flex items-center justify-center">
         <div className="text-center">
           <div className="mb-6 animate-pulse">
             <Image
-              src="/zero-trace-labs-logo.png"
-              alt="Zero Trace Labs"
+              src="/zero-trace-labs-logo-dark.png"
+              alt="0TraceLabs"
               width={120}
               height={120}
               className="mx-auto rounded-xl"
             />
           </div>
-          <Loader2 className="h-6 w-6 animate-spin mx-auto mb-4 text-blue-600" />
-          <p className="text-gray-600 dark:text-gray-300 font-medium">Loading...</p>
+          <Loader2 className="h-6 w-6 animate-spin mx-auto mb-4 text-nuclear-blue" />
+          <p className="text-muted-gray font-medium">Loading...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         {/* Auth Dialog */}
         <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
-          <DialogContent>
+          <DialogContent className="glass-card">
             <DialogHeader>
-              <DialogTitle>
+              <DialogTitle className="font-outfit text-2xl">
                 {authMode === 'signin' ? 'Sign In' : 'Sign Up'}
               </DialogTitle>
               <DialogDescription>
@@ -144,7 +144,7 @@ export default function Home() {
                 />
               </div>
 
-              <Button type="submit" className="w-full" disabled={authLoading}>
+              <Button type="submit" className="w-full btn-nuclear" disabled={authLoading}>
                 {authLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -158,7 +158,7 @@ export default function Home() {
               <div className="text-center">
                 <button
                   type="button"
-                  className="text-sm text-blue-600 hover:underline"
+                  className="text-sm text-nuclear-blue hover:underline"
                   onClick={() => setAuthMode(authMode === 'signin' ? 'signup' : 'signin')}
                 >
                   {authMode === 'signin'
@@ -172,28 +172,25 @@ export default function Home() {
         </Dialog>
 
         {/* Hero Section */}
-        <div className="mb-12 text-center">
-          <div className="mb-6">
+        <div className="mb-8 text-center scan-lines py-6">
+          <div className="mb-4">
             <Image
-              src="/zero-trace-labs-logo.png"
-              alt="Zero Trace Labs"
+              src="/zero-trace-labs-logo-dark.png"
+              alt="0TraceLabs"
               width={100}
               height={100}
               className="mx-auto rounded-xl"
             />
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-            Welcome to Zero Trace Labs
+          <h1 className="text-4xl md:text-5xl font-bold font-outfit text-foreground">
+            Welcome to 0TraceLabs
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-            Take control of your digital privacy. Search, monitor, and remove your personal information from data broker websites.
-          </p>
         </div>
 
         {/* Privacy Notice */}
-        <Alert className="mb-8 max-w-4xl mx-auto">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
+        <Alert className="mb-8 max-w-4xl mx-auto border-nuclear-blue/30 bg-nuclear-blue/10">
+          <AlertTriangle className="h-4 w-4 text-nuclear-blue" />
+          <AlertDescription className="text-foreground">
             <strong>Your Privacy Matters:</strong> We help you discover and remove your personal information from data brokers.
             All searches are secure, and we never share your data without your consent.
           </AlertDescription>
@@ -202,39 +199,39 @@ export default function Home() {
         {/* Stats Cards */}
         {user && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 max-w-4xl mx-auto">
-            <Card className="bg-white dark:bg-gray-800">
+            <Card className="glass-card border-nuclear-blue/20">
               <CardContent className="pt-6">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-blue-600 mb-2">
+                  <div className="text-3xl font-bold font-outfit text-nuclear-blue mb-2">
                     {searchHistory.length}
                   </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-300">
+                  <div className="text-sm text-muted-foreground">
                     Total Searches
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-white dark:bg-gray-800">
+            <Card className="glass-card border-warning-yellow/20">
               <CardContent className="pt-6">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-orange-600 mb-2">
+                  <div className="text-3xl font-bold font-outfit text-warning-yellow mb-2">
                     {removalRequests.length}
                   </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-300">
+                  <div className="text-sm text-muted-foreground">
                     Removal Requests
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-white dark:bg-gray-800">
+            <Card className="glass-card border-success-green/20">
               <CardContent className="pt-6">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-green-600 mb-2">
+                  <div className="text-3xl font-bold font-outfit text-success-green mb-2">
                     {dataSources.length || '17+'}
                   </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-300">
+                  <div className="text-sm text-muted-foreground">
                     Brokers Monitored
                   </div>
                 </div>
@@ -245,16 +242,16 @@ export default function Home() {
 
         {/* Quick Actions */}
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
+          <h2 className="text-2xl md:text-3xl font-bold font-outfit text-foreground mb-6 text-center">
             Quick Actions
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
             {/* Search Card */}
-            <Card className="bg-white dark:bg-gray-800 hover:shadow-lg transition-shadow">
+            <Card className="glass-card hover:shadow-lg hover:shadow-nuclear-blue/20 transition-all border-nuclear-blue/20">
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Search className="h-5 w-5 mr-2 text-blue-600" />
+                <CardTitle className="flex items-center font-outfit">
+                  <Search className="h-5 w-5 mr-2 text-nuclear-blue" />
                   Quick Search
                 </CardTitle>
                 <CardDescription>
@@ -262,7 +259,7 @@ export default function Home() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button asChild className="w-full">
+                <Button asChild className="w-full btn-nuclear">
                   <Link href="/search">
                     Start Search
                     <ArrowRight className="h-4 w-4 ml-2" />
@@ -272,10 +269,10 @@ export default function Home() {
             </Card>
 
             {/* Comprehensive Scan Card */}
-            <Card className="bg-white dark:bg-gray-800 hover:shadow-lg transition-shadow">
+            <Card className="glass-card hover:shadow-lg hover:shadow-nuclear-blue/20 transition-all border-nuclear-blue/20">
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Shield className="h-5 w-5 mr-2 text-purple-600" />
+                <CardTitle className="flex items-center font-outfit">
+                  <Shield className="h-5 w-5 mr-2 text-nuclear-blue" />
                   Comprehensive Scan
                   {!user && <Badge variant="secondary" className="ml-2">Pro</Badge>}
                 </CardTitle>
@@ -284,7 +281,7 @@ export default function Home() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button asChild className="w-full" disabled={!user} variant={user ? "default" : "secondary"}>
+                <Button asChild className="w-full btn-nuclear" disabled={!user} variant={user ? "default" : "secondary"}>
                   <Link href="/comprehensive">
                     Start Scan
                     <ArrowRight className="h-4 w-4 ml-2" />
@@ -294,10 +291,10 @@ export default function Home() {
             </Card>
 
             {/* History Card */}
-            <Card className="bg-white dark:bg-gray-800 hover:shadow-lg transition-shadow">
+            <Card className="glass-card hover:shadow-lg hover:shadow-success-green/20 transition-all border-success-green/20">
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <History className="h-5 w-5 mr-2 text-green-600" />
+                <CardTitle className="flex items-center font-outfit">
+                  <History className="h-5 w-5 mr-2 text-success-green" />
                   Search History
                   {!user && <Badge variant="secondary" className="ml-2">Pro</Badge>}
                 </CardTitle>
@@ -316,10 +313,10 @@ export default function Home() {
             </Card>
 
             {/* Removal Requests Card */}
-            <Card className="bg-white dark:bg-gray-800 hover:shadow-lg transition-shadow">
+            <Card className="glass-card hover:shadow-lg hover:shadow-warning-yellow/20 transition-all border-warning-yellow/20">
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <FileText className="h-5 w-5 mr-2 text-orange-600" />
+                <CardTitle className="flex items-center font-outfit">
+                  <FileText className="h-5 w-5 mr-2 text-warning-yellow" />
                   Removal Requests
                   {!user && <Badge variant="secondary" className="ml-2">Pro</Badge>}
                 </CardTitle>
@@ -328,7 +325,7 @@ export default function Home() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button asChild className="w-full" disabled={!user} variant={user ? "default" : "secondary"}>
+                <Button asChild className="w-full btn-detonate" disabled={!user} variant={user ? "default" : "secondary"}>
                   <Link href="/requests">
                     View Requests
                     <ArrowRight className="h-4 w-4 ml-2" />
@@ -340,10 +337,10 @@ export default function Home() {
 
           {/* Settings Card */}
           {user && (
-            <Card className="bg-white dark:bg-gray-800 mb-8">
+            <Card className="glass-card border-muted-gray/20 mb-8">
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Settings className="h-5 w-5 mr-2 text-gray-600" />
+                <CardTitle className="flex items-center font-outfit">
+                  <Settings className="h-5 w-5 mr-2 text-muted-gray" />
                   Account Settings
                 </CardTitle>
                 <CardDescription>
@@ -351,7 +348,7 @@ export default function Home() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button asChild variant="outline" className="w-full">
+                <Button asChild variant="outline" className="w-full border-muted-gray/30 hover:bg-muted-gray/10">
                   <Link href="/settings">
                     Open Settings
                     <ArrowRight className="h-4 w-4 ml-2" />
@@ -363,16 +360,16 @@ export default function Home() {
 
           {/* Sign In CTA */}
           {!user && (
-            <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+            <Card className="glass-card border-nuclear-blue/30 bg-nuclear-blue/10">
               <CardContent className="pt-6">
                 <div className="text-center">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  <h3 className="text-lg font-semibold font-outfit text-foreground mb-2">
                     Sign in to unlock all features
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-300 mb-4">
+                  <p className="text-muted-foreground mb-4">
                     Get access to comprehensive scanning, search history, and removal request tracking
                   </p>
-                  <Button onClick={() => setShowAuthDialog(true)}>
+                  <Button onClick={() => setShowAuthDialog(true)} className="btn-nuclear">
                     Sign In / Sign Up
                   </Button>
                 </div>

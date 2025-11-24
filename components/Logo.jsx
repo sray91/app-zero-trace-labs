@@ -92,7 +92,7 @@ export default function Logo({
             'dark:from-white dark:via-blue-200 dark:to-indigo-300',
             textSizeClasses[size]
           )}>
-            Zero Trace Labs
+            0TraceLabs
           </h1>
           <p className={cn(
             'text-gray-600 dark:text-gray-400 font-medium tracking-wide',

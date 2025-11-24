@@ -16,6 +16,10 @@ module.exports = {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        outfit: ['var(--font-outfit)', 'system-ui', 'sans-serif'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -50,6 +54,21 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+        },
+        // Brand-specific colors
+        "nuclear-blue": "#0044FF",
+        "deep-void": "#0C0E1A",
+        "ash-gray": "#F7F7FA",
+        "warning-yellow": "#FFD60A",
+        "success-green": "#00FF88",
+        "error-red": "#FF3B5C",
+        "muted-gray": "#A3B0C2",
       },
       borderRadius: {
         lg: "var(--radius)",

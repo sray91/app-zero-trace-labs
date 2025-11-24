@@ -4,7 +4,7 @@ import { Sidebar } from '@/components/Sidebar'
 
 export function AppLayout({ children }) {
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
+    <div className="flex h-screen overflow-hidden bg-background">
       {/* Sidebar */}
       <Sidebar />
 

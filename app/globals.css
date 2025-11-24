@@ -3,58 +3,56 @@
 @tailwind utilities;
 
 :root {
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
+  /* 0TraceLabs Brand Colors - Light Mode (Ash Gray base) */
+  --background: 240 20% 97%; /* Ash Gray #F7F7FA */
+  --foreground: 231 37% 7%; /* Deep Void #0C0E1A */
   --card: 0 0% 100%;
-  --card-foreground: 222.2 84% 4.9%;
+  --card-foreground: 231 37% 7%;
   --popover: 0 0% 100%;
-  --popover-foreground: 222.2 84% 4.9%;
-  --primary: 222.2 47.4% 11.2%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96%;
-  --accent-foreground: 222.2 47.4% 11.2%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 222.2 84% 4.9%;
-  --chart-1: 12 76% 61%;
-  --chart-2: 173 58% 39%;
-  --chart-3: 197 37% 24%;
-  --chart-4: 43 74% 66%;
-  --chart-5: 27 87% 67%;
+  --popover-foreground: 231 37% 7%;
+  --primary: 224 100% 50%; /* Nuclear Blue #0044FF */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 215 20% 70%; /* Muted Blue-Gray #A3B0C2 */
+  --secondary-foreground: 231 37% 7%;
+  --muted: 215 20% 70%; /* Muted Blue-Gray */
+  --muted-foreground: 215 20% 50%;
+  --accent: 224 100% 50%; /* Nuclear Blue */
+  --accent-foreground: 0 0% 100%;
+  --destructive: 350 100% 62%; /* Error Red #FF3B5C */
+  --destructive-foreground: 0 0% 100%;
+  --border: 215 20% 85%;
+  --input: 215 20% 85%;
+  --ring: 224 100% 50%;
+  --success: 152 100% 50%; /* Success Green #00FF88 */
+  --warning: 50 100% 52%; /* Warning Yellow #FFD60A */
+  --warning-foreground: 231 37% 7%;
   --radius: 0.5rem;
 }
 
 .dark {
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
-  --card: 222.2 84% 4.9%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 4.9%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 210 40% 98%;
-  --primary-foreground: 222.2 47.4% 11.2%;
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 212.7 26.8% 83.9%;
-  --chart-1: 220 70% 50%;
-  --chart-2: 160 60% 45%;
-  --chart-3: 30 80% 55%;
-  --chart-4: 280 65% 60%;
-  --chart-5: 340 75% 55%;
+  /* 0TraceLabs Brand Colors - Dark Mode Default (Deep Void base) */
+  --background: 231 37% 7%; /* Deep Void #0C0E1A */
+  --foreground: 0 0% 100%;
+  --card: 231 30% 12%; /* Slightly lighter than Deep Void for glassmorphic effect */
+  --card-foreground: 0 0% 100%;
+  --popover: 231 35% 10%;
+  --popover-foreground: 0 0% 100%;
+  --primary: 224 100% 50%; /* Nuclear Blue #0044FF */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 231 30% 15%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 231 30% 15%;
+  --muted-foreground: 215 20% 70%; /* Muted Blue-Gray #A3B0C2 */
+  --accent: 224 100% 50%; /* Nuclear Blue */
+  --accent-foreground: 0 0% 100%;
+  --destructive: 350 100% 62%; /* Error Red #FF3B5C */
+  --destructive-foreground: 0 0% 100%;
+  --border: 231 30% 18%;
+  --input: 231 30% 18%;
+  --ring: 224 100% 50%;
+  --success: 152 100% 50%; /* Success Green #00FF88 */
+  --warning: 50 100% 52%; /* Warning Yellow #FFD60A */
+  --warning-foreground: 231 37% 7%;
 }
 
 @layer base {
@@ -63,5 +61,118 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Outfit font letter-spacing for headings */
+  h1, h2, h3, h4, h5, h6 {
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer components {
+  /* Glassmorphic card variant */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+  }
+
+  .dark .glass-card {
+    background: rgba(12, 14, 26, 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* Scan-line texture for hero sections */
+  .scan-lines {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .scan-lines::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(0, 68, 255, 0.03) 0px,
+      rgba(0, 68, 255, 0.03) 1px,
+      transparent 1px,
+      transparent 2px
+    );
+    pointer-events: none;
+    opacity: 0.6;
+  }
+
+  /* Custom button variants */
+  .btn-detonate {
+    background: hsl(var(--warning));
+    color: hsl(var(--warning-foreground));
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .btn-detonate:hover {
+    background: hsl(50 100% 45%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 214, 10, 0.3);
+  }
+
+  .btn-nuclear {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .btn-nuclear:hover {
+    background: hsl(224 100% 45%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 68, 255, 0.3);
+  }
+}
+
+@layer utilities {
+  /* Brand-specific text colors */
+  .text-nuclear-blue {
+    color: #0044FF;
+  }
+
+  .text-success-green {
+    color: #00FF88;
+  }
+
+  .text-warning-yellow {
+    color: #FFD60A;
+  }
+
+  .text-error-red {
+    color: #FF3B5C;
+  }
+
+  .text-muted-gray {
+    color: #A3B0C2;
+  }
+
+  /* Brand-specific background colors */
+  .bg-nuclear-blue {
+    background-color: #0044FF;
+  }
+
+  .bg-deep-void {
+    background-color: #0C0E1A;
+  }
+
+  .bg-success-green {
+    background-color: #00FF88;
+  }
+
+  .bg-warning-yellow {
+    background-color: #FFD60A;
   }
 }

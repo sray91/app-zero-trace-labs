@@ -1,28 +1,38 @@
-import { Inter } from 'next/font/google'
+import { Inter, Outfit } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/lib/contexts/AuthContext'
 import { AppLayout } from '@/components/AppLayout'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--font-inter',
+})
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  weight: ['600', '700', '800', '900'],
+  variable: '--font-outfit',
+})
 
 export const metadata = {
-  title: 'Zero Trace Labs - Data Broker Search & Privacy Protection',
+  title: '0TraceLabs - Data Broker Search & Privacy Protection',
   description: 'Professional data broker monitoring and removal service. Discover where your personal information appears online and take control of your digital privacy with automated removal requests.',
   icons: {
     icon: '/favicon.ico',
     apple: '/favicon.ico',
   },
   openGraph: {
-    title: 'Zero Trace Labs - Data Privacy Protection',
+    title: '0TraceLabs - Data Privacy Protection',
     description: 'Professional data broker monitoring and removal service',
-    images: ['/zero-trace-labs-logo.png'],
+    images: ['/zero-trace-labs-logo-dark.png'],
   }
 }
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
+    <html lang="en" className="dark">
+      <body className={`${inter.variable} ${outfit.variable} font-sans`}>
         <AuthProvider>
           <AppLayout>
             {children}
