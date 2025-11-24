@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -38,7 +39,7 @@ const formatAddress = (address) => {
 }
 
 export default function SearchPage() {
-  const { user } = useAuth()
+  const { user, isPaidPlan } = useAuth()
   const { performSearch, submitRemovalRequest, dataSources } = useDataBroker()
 
   const [formData, setFormData] = useState({
@@ -119,6 +120,38 @@ export default function SearchPage() {
       case 'low': return 'bg-green-500 hover:bg-green-600'
       default: return 'bg-gray-500 hover:bg-gray-600'
     }
+  }
+
+  if (user && isPaidPlan) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="container mx-auto px-4 py-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              Quick Search Unavailable
+            </h1>
+            <p className="text-gray-600 dark:text-gray-300 max-w-3xl">
+              Your Whop membership unlocks comprehensive scanning. Please use the comprehensive scan experience instead of the quick search.
+            </p>
+          </div>
+
+          <Card className="bg-white dark:bg-gray-800 shadow-sm">
+            <CardContent className="py-10 text-center space-y-4">
+              <Shield className="h-10 w-10 mx-auto text-nuclear-blue" />
+              <p className="text-lg text-gray-700 dark:text-gray-200">
+                Paid plans route all searches through the comprehensive scanner for deeper coverage.
+              </p>
+              <Button asChild className="btn-nuclear">
+                <Link href="/comprehensive" className="inline-flex items-center justify-center">
+                  Go to Comprehensive Scan
+                  <ExternalLink className="h-4 w-4 ml-2" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
   }
 
   return (

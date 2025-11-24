@@ -27,41 +27,51 @@ const navigation = [
     name: 'Dashboard',
     href: '/',
     icon: Home,
-    description: 'Search and monitor your data'
+    description: 'Search and monitor your data',
+    planVisibility: 'all'
   },
   {
     name: 'Search',
     href: '/search',
     icon: Search,
-    description: 'Quick data broker search'
+    description: 'Quick data broker search',
+    planVisibility: 'freeOnly'
   },
   {
     name: 'Comprehensive Scan',
     href: '/comprehensive',
     icon: Shield,
     description: 'Deep scan across all brokers',
-    requiresAuth: true
+    requiresAuth: true,
+    requiresPaidPlan: true,
+    planVisibility: 'all'
   },
   {
     name: 'History',
     href: '/history',
     icon: History,
     description: 'View search history',
-    requiresAuth: true
+    requiresAuth: true,
+    requiresPaidPlan: true,
+    planVisibility: 'all'
   },
   {
     name: 'Removal Requests',
     href: '/requests',
     icon: FileText,
     description: 'Track removal requests',
-    requiresAuth: true
+    requiresAuth: true,
+    requiresPaidPlan: true,
+    planVisibility: 'all'
   },
   {
     name: 'Settings',
     href: '/settings',
     icon: Settings,
     description: 'Account settings',
-    requiresAuth: true
+    requiresAuth: true,
+    requiresPaidPlan: true,
+    planVisibility: 'all'
   }
 ]
 
@@ -69,7 +79,7 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const pathname = usePathname()
-  const { user, signOut } = useAuth()
+  const { user, signOut, planLabel, isPaidPlan } = useAuth()
 
   const handleSignOut = async () => {
     try {
@@ -137,9 +147,18 @@ export function Sidebar() {
       {/* Navigation Links */}
       <nav className="flex-1 overflow-y-auto p-4 space-y-1">
         {navigation.map((item) => {
+          const isHidden =
+            (item.planVisibility === 'freeOnly' && isPaidPlan) ||
+            (item.planVisibility === 'paidOnly' && !isPaidPlan)
+          if (isHidden) {
+            return null
+          }
+
           const isActive = pathname === item.href ||
             (item.href !== '/' && pathname.startsWith(item.href))
-          const isDisabled = item.requiresAuth && !user
+          const lacksAuth = item.requiresAuth && !user
+          const planRestricted = item.requiresPaidPlan && !isPaidPlan
+          const isDisabled = lacksAuth || planRestricted
 
           return (
             <Link
@@ -170,7 +189,9 @@ export function Sidebar() {
                 <span className="flex-1">{item.name}</span>
               )}
               {!collapsed && isDisabled && (
-                <span className="text-xs text-muted-foreground">Sign in</span>
+                <span className="text-xs text-muted-foreground">
+                  {planRestricted ? 'Upgrade' : 'Sign in'}
+                </span>
               )}
             </Link>
           )
@@ -198,7 +219,7 @@ export function Sidebar() {
                   {user.email}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Free Plan
+                  {planLabel}
                 </p>
               </div>
             )}

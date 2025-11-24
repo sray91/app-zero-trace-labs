@@ -159,8 +159,14 @@ src/
 | `REACT_APP_PEOPLE_DATA_LABS_API_KEY` | People Data Labs API key | No |
 | `REACT_APP_TRESTLE_API_KEY` | Trestle API key | No |
 | `REACT_APP_OPTERY_API_KEY` | Optery API key | No |
+| `WHOP_API_KEY` | Server-side key used to verify paid memberships with Whop | Yes (for paid tiers) |
 
 ### Supabase Setup
+### Whop Integration
+
+- Generate a Whop API key (`WHOP_API_KEY`) and add it to `.env.local`
+- (Optional) Override the base API URL with `WHOP_API_BASE_URL` if you are using a Whop sandbox environment
+- Paid-only features (comprehensive scan, history, removal requests) require a valid Whop membership linked to the user’s email
 
 1. Create a new project at [supabase.com](https://supabase.com)
 2. Go to Settings > API to get your URL and anon key

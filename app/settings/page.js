@@ -8,7 +8,7 @@ import { Settings } from 'lucide-react'
 import { useAuth } from '@/lib/contexts/AuthContext'
 
 export default function SettingsPage() {
-  const { user } = useAuth()
+  const { user, planLabel } = useAuth()
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -52,7 +52,7 @@ export default function SettingsPage() {
                 <Input
                   id="plan"
                   type="text"
-                  value="Free Plan"
+                  value={planLabel}
                   disabled
                   className="mt-1"
                 />

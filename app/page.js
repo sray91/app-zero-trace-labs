@@ -25,7 +25,15 @@ import { useDataBroker } from '@/lib/hooks/useDataBroker'
 import { useState } from 'react'
 
 export default function Home() {
-  const { user, signIn, signUp, loading: authLoading } = useAuth()
+  const {
+    user,
+    signIn,
+    signUp,
+    loading: authLoading,
+    planLabel,
+    isPaidPlan,
+    planLoading
+  } = useAuth()
   const { searchHistory, removalRequests, dataSources, loadDataSources } = useDataBroker()
   const [showAuthDialog, setShowAuthDialog] = useState(false)
   const [authForm, setAuthForm] = useState({ email: '', password: '' })
@@ -240,6 +248,15 @@ export default function Home() {
           </div>
         )}
 
+        {/* Plan Indicator */}
+        {user && (
+          <div className="max-w-4xl mx-auto mb-6 text-center">
+            <Badge variant={isPaidPlan ? 'default' : 'secondary'}>
+              {planLoading ? 'Checking plan…' : `Current Plan: ${planLabel}`}
+            </Badge>
+          </div>
+        )}
+
         {/* Quick Actions */}
         <div className="max-w-4xl mx-auto">
           <h2 className="text-2xl md:text-3xl font-bold font-outfit text-foreground mb-6 text-center">
@@ -247,26 +264,29 @@ export default function Home() {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-            {/* Search Card */}
-            <Card className="glass-card hover:shadow-lg hover:shadow-nuclear-blue/20 transition-all border-nuclear-blue/20">
-              <CardHeader>
-                <CardTitle className="flex items-center font-outfit">
-                  <Search className="h-5 w-5 mr-2 text-nuclear-blue" />
-                  Quick Search
-                </CardTitle>
-                <CardDescription>
-                  Search for your information across data broker websites
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button asChild className="w-full btn-nuclear">
-                  <Link href="/search">
-                    Start Search
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
+            {/* Search Card (Free tier only) */}
+            {!isPaidPlan && (
+              <Card className="glass-card hover:shadow-lg hover:shadow-nuclear-blue/20 transition-all border-nuclear-blue/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center font-outfit">
+                    <Search className="h-5 w-5 mr-2 text-nuclear-blue" />
+                    Quick Search
+                    <Badge variant="secondary" className="ml-2">Free</Badge>
+                  </CardTitle>
+                  <CardDescription>
+                    Search for your information across data broker websites
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button asChild className="w-full btn-nuclear">
+                    <Link href="/search">
+                      Start Search
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Comprehensive Scan Card */}
             <Card className="glass-card hover:shadow-lg hover:shadow-nuclear-blue/20 transition-all border-nuclear-blue/20">
@@ -274,19 +294,31 @@ export default function Home() {
                 <CardTitle className="flex items-center font-outfit">
                   <Shield className="h-5 w-5 mr-2 text-nuclear-blue" />
                   Comprehensive Scan
-                  {!user && <Badge variant="secondary" className="ml-2">Pro</Badge>}
+                  {!isPaidPlan && <Badge variant="secondary" className="ml-2">Whop Upgrade</Badge>}
                 </CardTitle>
                 <CardDescription>
                   Deep scan across all {dataSources.length || '17+'} major data broker sites
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button asChild className="w-full btn-nuclear" disabled={!user} variant={user ? "default" : "secondary"}>
-                  <Link href="/comprehensive">
-                    Start Scan
+                {user && isPaidPlan ? (
+                  <Button asChild className="w-full btn-nuclear">
+                    <Link href="/comprehensive">
+                      Start Scan
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button className="w-full btn-nuclear" disabled variant="secondary">
+                    {user ? 'Requires Paid Plan' : 'Sign in to continue'}
                     <ArrowRight className="h-4 w-4 ml-2" />
-                  </Link>
-                </Button>
+                  </Button>
+                )}
+                {!isPaidPlan && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Unlock comprehensive scanning with a Whop membership.
+                  </p>
+                )}
               </CardContent>
             </Card>
 
@@ -296,19 +328,31 @@ export default function Home() {
                 <CardTitle className="flex items-center font-outfit">
                   <History className="h-5 w-5 mr-2 text-success-green" />
                   Search History
-                  {!user && <Badge variant="secondary" className="ml-2">Pro</Badge>}
+                  {!isPaidPlan && <Badge variant="secondary" className="ml-2">Whop Upgrade</Badge>}
                 </CardTitle>
                 <CardDescription>
                   View your previous searches and results
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button asChild className="w-full" disabled={!user} variant={user ? "default" : "secondary"}>
-                  <Link href="/history">
-                    View History
+                {user && isPaidPlan ? (
+                  <Button asChild className="w-full">
+                    <Link href="/history">
+                      View History
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button className="w-full" disabled variant="secondary">
+                    {user ? 'Requires Paid Plan' : 'Sign in to continue'}
                     <ArrowRight className="h-4 w-4 ml-2" />
-                  </Link>
-                </Button>
+                  </Button>
+                )}
+                {!isPaidPlan && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Sign in with a paid plan to save and view search history.
+                  </p>
+                )}
               </CardContent>
             </Card>
 
@@ -318,19 +362,31 @@ export default function Home() {
                 <CardTitle className="flex items-center font-outfit">
                   <FileText className="h-5 w-5 mr-2 text-warning-yellow" />
                   Removal Requests
-                  {!user && <Badge variant="secondary" className="ml-2">Pro</Badge>}
+                  {!isPaidPlan && <Badge variant="secondary" className="ml-2">Whop Upgrade</Badge>}
                 </CardTitle>
                 <CardDescription>
                   Track your data removal requests
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button asChild className="w-full btn-detonate" disabled={!user} variant={user ? "default" : "secondary"}>
-                  <Link href="/requests">
-                    View Requests
+                {user && isPaidPlan ? (
+                  <Button asChild className="w-full btn-detonate">
+                    <Link href="/requests">
+                      View Requests
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button className="w-full btn-detonate" disabled variant="secondary">
+                    {user ? 'Requires Paid Plan' : 'Sign in to continue'}
                     <ArrowRight className="h-4 w-4 ml-2" />
-                  </Link>
-                </Button>
+                  </Button>
+                )}
+                {!isPaidPlan && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Upgrade on Whop to submit and track removal requests.
+                  </p>
+                )}
               </CardContent>
             </Card>
           </div>

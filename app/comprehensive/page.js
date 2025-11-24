@@ -31,7 +31,7 @@ const formatAddress = (address) => {
 }
 
 export default function ComprehensivePage() {
-  const { user } = useAuth()
+  const { user, isPaidPlan, planLabel } = useAuth()
   const { scanPublicBrokerSites, submitRemovalRequest, dataSources } = useDataBroker()
 
   const [formData, setFormData] = useState({
@@ -136,6 +136,55 @@ export default function ComprehensivePage() {
       case 'low': return 'bg-green-500 hover:bg-green-600'
       default: return 'bg-gray-500 hover:bg-gray-600'
     }
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="container mx-auto px-4 py-8">
+          <Card className="bg-white dark:bg-gray-800 shadow-sm">
+            <CardContent className="py-10 text-center space-y-4">
+              <Shield className="h-12 w-12 text-nuclear-blue mx-auto" />
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Sign In Required</h1>
+              <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                Comprehensive scanning is available only for authenticated Whop members. Please sign in to continue.
+              </p>
+              <Button
+                className="btn-nuclear mx-auto"
+                onClick={() => window.dispatchEvent(new CustomEvent('openAuthDialog'))}
+              >
+                Sign In
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isPaidPlan) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="container mx-auto px-4 py-8">
+          <Card className="bg-white dark:bg-gray-800 shadow-sm">
+            <CardContent className="py-10 text-center space-y-4">
+              <Shield className="h-12 w-12 text-nuclear-blue mx-auto" />
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Upgrade Required</h1>
+              <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                Your current plan ({planLabel || 'Free Plan'}) does not include comprehensive scanning.
+                Upgrade via Whop to unlock automated deep scans across all broker tiers.
+              </p>
+              <Button
+                className="btn-nuclear mx-auto"
+                onClick={() => window.open('https://whop.com/', '_blank', 'noopener,noreferrer')}
+              >
+                Upgrade on Whop
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
   }
 
   return (

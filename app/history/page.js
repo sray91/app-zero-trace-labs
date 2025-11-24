@@ -1,10 +1,49 @@
 'use client'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { History } from 'lucide-react'
 import { useDataBroker } from '@/lib/hooks/useDataBroker'
+import { useAuth } from '@/lib/contexts/AuthContext'
+
+const UpgradeRequired = ({ planLabel }) => (
+  <Card className="bg-white dark:bg-gray-800 shadow-sm">
+    <CardContent className="py-10 text-center space-y-4">
+      <History className="h-12 w-12 text-success-green mx-auto" />
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Upgrade Required</h1>
+      <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+        Search history is available for paid plans. Your current plan ({planLabel || 'Free Plan'}) does not support history tracking.
+      </p>
+      <Button
+        className="btn-nuclear mx-auto"
+        onClick={() => window.open('https://whop.com/', '_blank', 'noopener,noreferrer')}
+      >
+        Upgrade on Whop
+      </Button>
+    </CardContent>
+  </Card>
+)
+
+const SignInRequired = () => (
+  <Card className="bg-white dark:bg-gray-800 shadow-sm">
+    <CardContent className="py-10 text-center space-y-4">
+      <History className="h-12 w-12 text-success-green mx-auto" />
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Sign In Required</h1>
+      <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+        Please sign in with your Whop-connected account to view your saved search history.
+      </p>
+      <Button
+        className="btn-nuclear mx-auto"
+        onClick={() => window.dispatchEvent(new CustomEvent('openAuthDialog'))}
+      >
+        Sign In
+      </Button>
+    </CardContent>
+  </Card>
+)
 
 export default function HistoryPage() {
+  const { user, isPaidPlan, planLabel } = useAuth()
   const { searchHistory } = useDataBroker()
 
   return (
@@ -20,7 +59,12 @@ export default function HistoryPage() {
           </p>
         </div>
 
-        <Card className="bg-white dark:bg-gray-800 shadow-sm">
+        {!user && <SignInRequired />}
+
+        {user && !isPaidPlan && <UpgradeRequired planLabel={planLabel} />}
+
+        {user && isPaidPlan && (
+          <Card className="bg-white dark:bg-gray-800 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center">
               <History className="h-5 w-5 mr-2" />
@@ -58,7 +102,8 @@ export default function HistoryPage() {
               </p>
             )}
           </CardContent>
-        </Card>
+          </Card>
+        )}
       </div>
     </div>
   )
