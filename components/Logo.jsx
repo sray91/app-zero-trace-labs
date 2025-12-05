@@ -52,37 +52,28 @@ export default function Logo({
     xl: 'text-4xl'
   }
 
+  const sizePx = {
+    small: 32,
+    medium: 48,
+    large: 64,
+    xl: 80
+  }
+
   return (
     <div className={cn('flex items-center', className)}>
       <div className={cn(
         'relative flex items-center justify-center rounded-xl overflow-hidden',
-        'bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-800 dark:to-gray-900',
-        'border border-gray-200/50 dark:border-gray-700/50 shadow-sm',
         sizeClasses[size],
         animate && 'hover:scale-105 transition-transform duration-200'
       )}>
-        {/* Always show SVG logo for reliability */}
-        <div className={cn(
-          'flex items-center justify-center text-blue-600 dark:text-blue-400',
-          size === 'small' ? 'text-sm' : 
-          size === 'medium' ? 'text-lg' : 
-          size === 'large' ? 'text-xl' : 'text-2xl'
-        )}>
-          <svg 
-            viewBox="0 0 24 24" 
-            fill="currentColor" 
-            className={cn(
-              'w-full h-full p-1.5',
-              size === 'small' ? 'max-w-6' : 
-              size === 'medium' ? 'max-w-8' : 
-              size === 'large' ? 'max-w-10' : 'max-w-12'
-            )}
-          >
-            {/* Shield icon representing security/privacy */}
-            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
-            <path d="M8 12l2 2 4-4" stroke="white" strokeWidth="1.5" fill="none"/>
-          </svg>
-        </div>
+        <Image
+          src="/zero-trace-labs-logo-dark.png"
+          alt="0TraceLabs"
+          width={sizePx[size]}
+          height={sizePx[size]}
+          className="rounded-xl"
+          priority
+        />
       </div>
       
       {showText && (
