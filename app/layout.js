@@ -1,7 +1,6 @@
 import { Inter, Outfit } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/lib/contexts/AuthContext'
-import { AppLayout } from '@/components/AppLayout'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -34,9 +33,7 @@ export default function RootLayout({ children }) {
     <html lang="en" className="dark">
       <body className={`${inter.variable} ${outfit.variable} font-sans`}>
         <AuthProvider>
-          <AppLayout>
-            {children}
-          </AppLayout>
+          {children}
         </AuthProvider>
       </body>
     </html>
