@@ -152,7 +152,7 @@ export default function SignInPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-4">
           <div className="flex justify-center">
-            <Logo />
+            <Logo size="xl" showText={true} />
           </div>
           <div className="text-center">
             <CardTitle className="text-2xl font-bold">
