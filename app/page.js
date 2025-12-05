@@ -5,10 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import {
   Search,
@@ -22,55 +19,16 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/lib/contexts/AuthContext'
 import { useDataBroker } from '@/lib/hooks/useDataBroker'
-import { useState } from 'react'
 
 export default function Home() {
   const {
     user,
-    signIn,
-    signUp,
     loading: authLoading,
     planLabel,
     isPaidPlan,
     planLoading
   } = useAuth()
   const { searchHistory, removalRequests, dataSources, loadDataSources } = useDataBroker()
-  const [showAuthDialog, setShowAuthDialog] = useState(false)
-  const [authForm, setAuthForm] = useState({ email: '', password: '' })
-  const [authMode, setAuthMode] = useState('signin')
-
-  const handleAuthInputChange = (e) => {
-    const { name, value } = e.target
-    setAuthForm(prev => ({
-      ...prev,
-      [name]: value
-    }))
-  }
-
-  const handleAuth = async (e) => {
-    e.preventDefault()
-
-    try {
-      let result
-      if (authMode === 'signin') {
-        result = await signIn(authForm.email, authForm.password)
-      } else {
-        result = await signUp(authForm.email, authForm.password)
-      }
-
-      if (result.error) {
-        alert(`Authentication failed: ${result.error.message}`)
-      } else {
-        setShowAuthDialog(false)
-        setAuthForm({ email: '', password: '' })
-        if (authMode === 'signup') {
-          alert('Please check your email to confirm your account.')
-        }
-      }
-    } catch (error) {
-      alert(`Authentication error: ${error.message}`)
-    }
-  }
 
   // Initialize data sources when component mounts
   useEffect(() => {
@@ -78,16 +36,6 @@ export default function Home() {
       loadDataSources()
     }
   }, [user, dataSources.length, loadDataSources])
-
-  // Listen for auth dialog open events from sidebar
-  useEffect(() => {
-    const handleOpenAuthDialog = () => {
-      setShowAuthDialog(true)
-    }
-
-    window.addEventListener('openAuthDialog', handleOpenAuthDialog)
-    return () => window.removeEventListener('openAuthDialog', handleOpenAuthDialog)
-  }, [])
 
   if (authLoading) {
     return (
@@ -112,73 +60,6 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
-        {/* Auth Dialog */}
-        <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
-          <DialogContent className="glass-card">
-            <DialogHeader>
-              <DialogTitle className="font-outfit text-2xl">
-                {authMode === 'signin' ? 'Sign In' : 'Sign Up'}
-              </DialogTitle>
-              <DialogDescription>
-                {authMode === 'signin'
-                  ? 'Sign in to save your search history and manage removal requests.'
-                  : 'Create an account to save your search history and manage removal requests.'
-                }
-              </DialogDescription>
-            </DialogHeader>
-
-            <form onSubmit={handleAuth} className="space-y-4">
-              <div>
-                <Label htmlFor="auth-email">Email</Label>
-                <Input
-                  id="auth-email"
-                  name="email"
-                  type="email"
-                  value={authForm.email}
-                  onChange={handleAuthInputChange}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="auth-password">Password</Label>
-                <Input
-                  id="auth-password"
-                  name="password"
-                  type="password"
-                  value={authForm.password}
-                  onChange={handleAuthInputChange}
-                  required
-                />
-              </div>
-
-              <Button type="submit" className="w-full btn-nuclear" disabled={authLoading}>
-                {authLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {authMode === 'signin' ? 'Signing In...' : 'Signing Up...'}
-                  </>
-                ) : (
-                  authMode === 'signin' ? 'Sign In' : 'Sign Up'
-                )}
-              </Button>
-
-              <div className="text-center">
-                <button
-                  type="button"
-                  className="text-sm text-nuclear-blue hover:underline"
-                  onClick={() => setAuthMode(authMode === 'signin' ? 'signup' : 'signin')}
-                >
-                  {authMode === 'signin'
-                    ? "Don't have an account? Sign up"
-                    : "Already have an account? Sign in"
-                  }
-                </button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-
         {/* Hero Section */}
         <div className="mb-8 text-center scan-lines py-6">
           <div className="mb-4">
