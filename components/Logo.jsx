@@ -85,14 +85,6 @@ export default function Logo({
           )}>
             0TraceLabs
           </h1>
-          <p className={cn(
-            'text-gray-600 dark:text-gray-400 font-medium tracking-wide',
-            size === 'small' ? 'text-xs' : 
-            size === 'medium' ? 'text-sm' : 
-            size === 'large' ? 'text-base' : 'text-lg'
-          )}>
-            Data Privacy Protection
-          </p>
         </div>
       )}
     </div>
