@@ -31,6 +31,8 @@ export default function SignInPage() {
       const response = await fetch(`/api/check-whop-customer?email=${encodeURIComponent(email)}`)
       const customerData = await response.json()
 
+      console.log('Customer check response:', customerData)
+
       if (customerData.error) {
         setError('An error occurred. Please try again.')
         setLoading(false)
@@ -39,15 +41,18 @@ export default function SignInPage() {
 
       // If user has auth account, show password field
       if (customerData.hasAuthAccount) {
+        console.log('User has auth account, showing password field')
         setStep('password')
       }
       // If user has Whop subscription but no auth account, show password creation
       else if (customerData.hasCustomer && customerData.hasActiveSubscription) {
+        console.log('User has active subscription but no auth account, showing password creation')
         setHasWhopSubscription(true)
         setStep('create-password')
       }
       // No account and no subscription - redirect to pricing
       else {
+        console.log('No customer or subscription found, redirecting to pricing')
         window.location.href = 'https://0tracelabs.com/pricing'
         return
       }
@@ -125,6 +130,18 @@ export default function SignInPage() {
       })
 
       if (signUpError) {
+        // If user already exists, they might have an old account - direct them to sign in
+        if (signUpError.message.includes('already registered') || signUpError.message.includes('User already registered')) {
+          setError('An account with this email already exists. Please try signing in instead.')
+          setLoading(false)
+          setTimeout(() => {
+            setStep('email')
+            setPassword('')
+            setConfirmPassword('')
+            setError('')
+          }, 3000)
+          return
+        }
         setError(signUpError.message)
         setLoading(false)
         return

@@ -48,7 +48,9 @@ export async function GET(request) {
     })
 
     let hasAuthAccount = false
+    let authUserEmails = []
     if (!authError && authData?.users) {
+      authUserEmails = authData.users.map(u => u.email?.toLowerCase() || '')
       hasAuthAccount = authData.users.some(u => u.email?.toLowerCase() === email.toLowerCase())
     }
 
@@ -58,7 +60,8 @@ export async function GET(request) {
       hasActiveSubscription,
       hasAuthAccount,
       authError: authError?.message,
-      totalAuthUsers: authData?.users?.length
+      totalAuthUsers: authData?.users?.length,
+      authUserEmails: authUserEmails
     })
 
     return NextResponse.json({
