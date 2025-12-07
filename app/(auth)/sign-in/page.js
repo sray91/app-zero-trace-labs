@@ -152,20 +152,20 @@ export default function SignInPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-4">
           <div className="flex justify-center">
-            <Logo size="xl" showText={true} />
+            <Logo size="xxl" showText={false} />
           </div>
-          <div className="text-center">
-            <CardTitle className="text-2xl font-bold">
-              {step === 'email' && 'Welcome to 0Trace'}
-              {step === 'password' && 'Sign In'}
-              {step === 'create-password' && 'Set Up Your Password'}
-            </CardTitle>
-            <CardDescription>
-              {step === 'email' && 'Enter your email to get started'}
-              {step === 'password' && 'Enter your password to continue'}
-              {step === 'create-password' && 'Create a password for your account'}
-            </CardDescription>
-          </div>
+          {step !== 'email' && (
+            <div className="text-center">
+              <CardTitle className="text-2xl font-bold">
+                {step === 'password' && 'Sign In'}
+                {step === 'create-password' && 'Set Up Your Password'}
+              </CardTitle>
+              <CardDescription>
+                {step === 'password' && 'Enter your password to continue'}
+                {step === 'create-password' && 'Create a password for your account'}
+              </CardDescription>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {error && (

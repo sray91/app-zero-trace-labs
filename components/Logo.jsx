@@ -10,7 +10,8 @@ function LogoSkeleton({ size, showText }) {
     small: 'h-8 w-8',
     medium: 'h-12 w-12',
     large: 'h-16 w-16',
-    xl: 'h-20 w-20'
+    xl: 'h-20 w-20',
+    xxl: 'h-32 w-32'
   }
 
   return (
@@ -42,21 +43,24 @@ export default function Logo({
     small: 'h-8 w-8',
     medium: 'h-12 w-12',
     large: 'h-16 w-16',
-    xl: 'h-20 w-20'
+    xl: 'h-20 w-20',
+    xxl: 'h-32 w-32'
   }
 
   const textSizeClasses = {
     small: 'text-lg',
     medium: 'text-2xl',
     large: 'text-3xl',
-    xl: 'text-4xl'
+    xl: 'text-4xl',
+    xxl: 'text-5xl'
   }
 
   const sizePx = {
     small: 32,
     medium: 48,
     large: 64,
-    xl: 80
+    xl: 80,
+    xxl: 128
   }
 
   return (

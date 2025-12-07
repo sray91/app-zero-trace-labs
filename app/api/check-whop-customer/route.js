@@ -41,13 +41,25 @@ export async function GET(request) {
       customer.subscription_status === 'trialing' ||
       customer.has_app_access === true
 
-    // Check if user has Supabase auth account
-    const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers()
+    // Check if user has Supabase auth account by listing users
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000
+    })
 
     let hasAuthAccount = false
-    if (!authError && authUsers?.users) {
-      hasAuthAccount = authUsers.users.some(u => u.email?.toLowerCase() === email.toLowerCase())
+    if (!authError && authData?.users) {
+      hasAuthAccount = authData.users.some(u => u.email?.toLowerCase() === email.toLowerCase())
     }
+
+    console.log('Check customer result:', {
+      email: email.toLowerCase(),
+      hasCustomer: true,
+      hasActiveSubscription,
+      hasAuthAccount,
+      authError: authError?.message,
+      totalAuthUsers: authData?.users?.length
+    })
 
     return NextResponse.json({
       hasCustomer: true,
