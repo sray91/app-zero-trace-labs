@@ -27,48 +27,37 @@ async function syncWhopUserToDatabase(whopData) {
       return { success: false, error: 'No email provided' }
     }
 
-    const customerData = {
-      email,
-      whop_user_id: whopData.id || whopData.user_id,
-      full_name: whopData.name || whopData.username || null,
+    // Look up user_id from auth.users by email
+    const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers()
+    const authUser = authUsers?.users?.find(u => u.email?.toLowerCase() === email)
+
+    if (!authUser) {
+      console.log(`No auth user found for email: ${email} - subscription will be created when user signs up`)
+      return { success: false, error: 'No auth user found for email' }
+    }
+
+    const subscriptionData = {
+      user_id: authUser.id,
+      status: whopData.status || 'active',
+      plan_id: whopData.plan?.id || whopData.product?.id || null,
       plan_name: whopData.plan?.name || whopData.product?.name || null,
-      subscription_status: whopData.status || 'active',
-      has_app_access: whopData.valid === true || whopData.status === 'active',
+      provider: 'whop',
+      provider_subscription_id: whopData.membership_id || null,
+      provider_customer_id: whopData.id || whopData.user_id || null,
+      has_app_access: whopData.has_app_access ?? (whopData.valid === true || whopData.status === 'active'),
+      current_period_end: whopData.current_period_end || null,
       updated_at: new Date().toISOString()
     }
 
-    const { data: existingCustomer, error: fetchError } = await supabaseAdmin
-      .from('customers')
-      .select('*')
-      .eq('email', email)
-      .single()
+    const { data, error } = await supabaseAdmin
+      .from('subscriptions')
+      .upsert(subscriptionData, { onConflict: 'user_id' })
+      .select()
 
-    if (fetchError && fetchError.code !== 'PGRST116') {
-      throw fetchError
-    }
+    if (error) throw error
 
-    if (existingCustomer) {
-      const { data, error } = await supabaseAdmin
-        .from('customers')
-        .update(customerData)
-        .eq('id', existingCustomer.id)
-        .select()
-
-      if (error) throw error
-
-      console.log(`Updated customer: ${email}`)
-      return { success: true, action: 'updated', data }
-    } else {
-      const { data, error } = await supabaseAdmin
-        .from('customers')
-        .insert([{ ...customerData, created_at: new Date().toISOString() }])
-        .select()
-
-      if (error) throw error
-
-      console.log(`Created customer: ${email}`)
-      return { success: true, action: 'created', data }
-    }
+    console.log(`Upserted subscription for user: ${email}`)
+    return { success: true, action: 'upserted', data }
   } catch (error) {
     console.error('Error syncing Whop user:', error)
     return { success: false, error: error.message }
@@ -103,25 +92,13 @@ export async function POST(request) {
         await syncWhopUserToDatabase({
           id: body.data?.user_id || body.data?.user?.id,
           email: body.data?.user?.email || body.data?.email,
-          name: body.data?.user?.name || body.data?.user?.username,
+          membership_id: body.data?.id,
           status: 'active',
           valid: true,
+          has_app_access: true,
           plan: body.data?.plan,
-          product: body.data?.product
-        })
-        break
-
-      case 'membership.went_invalid':
-      case 'membership.deleted':
-      case 'payment.failed':
-        await syncWhopUserToDatabase({
-          id: body.data?.user_id || body.data?.user?.id,
-          email: body.data?.user?.email || body.data?.email,
-          name: body.data?.user?.name || body.data?.user?.username,
-          status: 'cancelled',
-          valid: false,
-          plan: body.data?.plan,
-          product: body.data?.product
+          product: body.data?.product,
+          current_period_end: body.data?.renewal_period_end || body.data?.access_expires_at
         })
         break
 
@@ -129,11 +106,55 @@ export async function POST(request) {
         await syncWhopUserToDatabase({
           id: body.data?.user_id || body.data?.user?.id,
           email: body.data?.user?.email || body.data?.email,
-          name: body.data?.user?.name || body.data?.user?.username,
-          status: body.data?.status,
+          membership_id: body.data?.id,
+          status: body.data?.status || 'active',
           valid: body.data?.valid,
+          has_app_access: body.data?.valid === true,
           plan: body.data?.plan,
-          product: body.data?.product
+          product: body.data?.product,
+          current_period_end: body.data?.renewal_period_end || body.data?.access_expires_at
+        })
+        break
+
+      case 'membership.cancelled':
+        await syncWhopUserToDatabase({
+          id: body.data?.user_id || body.data?.user?.id,
+          email: body.data?.user?.email || body.data?.email,
+          membership_id: body.data?.id,
+          status: 'cancelled',
+          valid: false,
+          plan: body.data?.plan,
+          product: body.data?.product,
+          current_period_end: body.data?.renewal_period_end || body.data?.access_expires_at
+        })
+        break
+
+      case 'membership.went_invalid':
+      case 'membership.deleted':
+      case 'membership.expired':
+        await syncWhopUserToDatabase({
+          id: body.data?.user_id || body.data?.user?.id,
+          email: body.data?.user?.email || body.data?.email,
+          membership_id: body.data?.id,
+          status: 'expired',
+          valid: false,
+          has_app_access: false,
+          plan: body.data?.plan,
+          product: body.data?.product,
+          current_period_end: body.data?.renewal_period_end || body.data?.access_expires_at
+        })
+        break
+
+      case 'payment.failed':
+        await syncWhopUserToDatabase({
+          id: body.data?.user_id || body.data?.user?.id,
+          email: body.data?.user?.email || body.data?.email,
+          membership_id: body.data?.membership_id || body.data?.id,
+          status: 'past_due',
+          valid: true,
+          plan: body.data?.plan,
+          product: body.data?.product,
+          current_period_end: body.data?.renewal_period_end || body.data?.access_expires_at
         })
         break
 
