@@ -19,28 +19,6 @@ export async function GET(request) {
       )
     }
 
-    // Check if customer exists with active subscription
-    const { data: customer, error: customerError } = await supabaseAdmin
-      .from('customers')
-      .select('*')
-      .eq('email', email.toLowerCase())
-      .single()
-
-    if (customerError) {
-      // No customer found
-      return NextResponse.json({
-        hasCustomer: false,
-        hasActiveSubscription: false,
-        customer: null
-      })
-    }
-
-    // Check subscription status
-    const hasActiveSubscription =
-      customer.subscription_status === 'active' ||
-      customer.subscription_status === 'trialing' ||
-      customer.has_app_access === true
-
     // Check if user has Supabase auth account by listing users
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.listUsers({
       page: 1,
@@ -48,15 +26,42 @@ export async function GET(request) {
     })
 
     let hasAuthAccount = false
+    let authUser = null
     let authUserEmails = []
+
     if (!authError && authData?.users) {
       authUserEmails = authData.users.map(u => u.email?.toLowerCase() || '')
-      hasAuthAccount = authData.users.some(u => u.email?.toLowerCase() === email.toLowerCase())
+      authUser = authData.users.find(u => u.email?.toLowerCase() === email.toLowerCase())
+      hasAuthAccount = !!authUser
     }
 
-    console.log('Check customer result:', {
+    // Check if subscription exists for this user
+    let subscription = null
+    let hasSubscription = false
+
+    if (authUser) {
+      const { data: subscriptionData, error: subscriptionError } = await supabaseAdmin
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', authUser.id)
+        .single()
+
+      if (!subscriptionError && subscriptionData) {
+        subscription = subscriptionData
+        hasSubscription = true
+      }
+    }
+
+    // Check subscription status
+    const hasActiveSubscription = subscription && (
+      subscription.status === 'active' ||
+      subscription.status === 'trialing' ||
+      subscription.has_app_access === true
+    )
+
+    console.log('Check subscription result:', {
       email: email.toLowerCase(),
-      hasCustomer: true,
+      hasSubscription,
       hasActiveSubscription,
       hasAuthAccount,
       authError: authError?.message,
@@ -65,20 +70,21 @@ export async function GET(request) {
     })
 
     return NextResponse.json({
-      hasCustomer: true,
+      hasSubscription,
       hasActiveSubscription,
       hasAuthAccount,
-      customer: {
-        id: customer.id,
-        email: customer.email,
-        full_name: customer.full_name,
-        plan_name: customer.plan_name,
-        subscription_status: customer.subscription_status,
-        has_app_access: customer.has_app_access
-      }
+      subscription: subscription ? {
+        id: subscription.id,
+        user_id: subscription.user_id,
+        status: subscription.status,
+        plan_id: subscription.plan_id,
+        plan_name: subscription.plan_name,
+        has_app_access: subscription.has_app_access,
+        current_period_end: subscription.current_period_end
+      } : null
     })
   } catch (error) {
-    console.error('Error checking Whop customer:', error)
+    console.error('Error checking Whop subscription:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
