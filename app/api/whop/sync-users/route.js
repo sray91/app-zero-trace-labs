@@ -57,6 +57,15 @@ async function syncMembershipToDatabase(membership) {
 
     console.log('Processing membership:', { email, status: membership.status, product: membership.product?.name })
 
+    // Look up user_id from auth.users by email
+    const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers()
+    const authUser = authUsers?.users?.find(u => u.email?.toLowerCase() === email)
+
+    if (!authUser) {
+      console.log(`No auth user found for email: ${email} - skipping`)
+      return { success: false, error: 'No auth user found', email }
+    }
+
     const rawStatus = membership.status?.toLowerCase() || 'active'
     // Map Whop statuses to database-allowed values
     const statusMap = {
@@ -66,45 +75,33 @@ async function syncMembershipToDatabase(membership) {
       'trialing': 'trialing',
       'past_due': 'past_due'
     }
-    const subscription_status = statusMap[rawStatus] || 'cancelled'
+    const status = statusMap[rawStatus] || 'cancelled'
 
-    const isActive = ['active', 'trialing', 'past_due'].includes(subscription_status)
+    const isActive = ['active', 'trialing', 'past_due'].includes(status)
 
-    const customerData = {
-      email,
-      whop_user_id: membership.user?.id || membership.user_id,
-      whop_plan_id: membership.plan_id || membership.product?.id || 'unknown',
-      full_name: membership.user?.name || membership.user?.username || 'Whop User',
-      plan_name: membership.product?.name || membership.plan?.name || 'Standard Plan',
-      subscription_status,
+    const subscriptionData = {
+      user_id: authUser.id,
+      status,
+      plan_id: membership.plan_id || membership.product?.id || null,
+      plan_name: membership.product?.name || membership.plan?.name || null,
+      provider: 'whop',
+      provider_subscription_id: membership.id || null,
+      provider_customer_id: membership.user?.id || membership.user_id || null,
       has_app_access: isActive,
+      current_period_end: membership.renewal_period_end || membership.access_expires_at || null,
       updated_at: new Date().toISOString()
     }
 
-    const { data: existingCustomer } = await supabaseAdmin
-      .from('customers')
-      .select('*')
-      .eq('email', email)
-      .single()
+    const { data, error } = await supabaseAdmin
+      .from('subscriptions')
+      .upsert(subscriptionData, { onConflict: 'user_id' })
+      .select()
 
-    if (existingCustomer) {
-      const { error } = await supabaseAdmin
-        .from('customers')
-        .update(customerData)
-        .eq('id', existingCustomer.id)
+    if (error) throw error
 
-      if (error) throw error
-      return { success: true, action: 'updated', email }
-    } else {
-      const { error } = await supabaseAdmin
-        .from('customers')
-        .insert([{ ...customerData, created_at: new Date().toISOString() }])
-
-      if (error) throw error
-      return { success: true, action: 'created', email }
-    }
+    return { success: true, action: 'upserted', email }
   } catch (error) {
-    return { success: false, error: error.message, email: membership.email }
+    return { success: false, error: error.message, email: membership.user?.email || membership.email }
   }
 }
 
@@ -154,17 +151,15 @@ export async function POST(request) {
       uniqueMemberships.map(membership => syncMembershipToDatabase(membership))
     )
 
-    const created = results.filter(r => r.success && r.action === 'created').length
-    const updated = results.filter(r => r.success && r.action === 'updated').length
+    const upserted = results.filter(r => r.success && r.action === 'upserted').length
     const failed = results.filter(r => !r.success)
 
-    console.log(`Sync complete: ${created} created, ${updated} updated, ${failed.length} failed`)
+    console.log(`Sync complete: ${upserted} upserted, ${failed.length} failed`)
 
     return NextResponse.json({
       success: true,
       total: memberships.length,
-      created,
-      updated,
+      upserted,
       failed: failed.length,
       errors: failed.length > 0 ? failed : undefined
     })
@@ -189,8 +184,8 @@ export async function GET(request) {
       )
     }
 
-    const { data: customers, error } = await supabaseAdmin
-      .from('customers')
+    const { data: subscriptions, error } = await supabaseAdmin
+      .from('subscriptions')
       .select('*')
       .order('created_at', { ascending: false })
 
@@ -198,11 +193,11 @@ export async function GET(request) {
 
     return NextResponse.json({
       success: true,
-      count: customers.length,
-      customers
+      count: subscriptions.length,
+      subscriptions
     })
   } catch (error) {
-    console.error('Error fetching customers:', error)
+    console.error('Error fetching subscriptions:', error)
     return NextResponse.json(
       { error: error.message },
       { status: 500 }

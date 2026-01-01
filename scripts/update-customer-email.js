@@ -1,5 +1,6 @@
-// Script to update customer email in Supabase
+// Script to update user email in Supabase auth
 // Run with: node scripts/update-customer-email.js
+// Note: This updates the auth.users email, which is used by the subscriptions table
 
 import { createClient } from '@supabase/supabase-js'
 import dotenv from 'dotenv'
@@ -12,29 +13,46 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
-async function updateCustomerEmail() {
+async function updateUserEmail() {
   const oldEmail = 'swanaganray@gmail.com'
   const newEmail = 'rayswanagan@gmail.com'
 
-  console.log(`Updating customer email from ${oldEmail} to ${newEmail}...`)
+  console.log(`Updating user email from ${oldEmail} to ${newEmail}...`)
 
-  // Update the customer record
-  const { data, error } = await supabaseAdmin
-    .from('customers')
-    .update({ email: newEmail })
-    .eq('email', oldEmail)
-    .select()
+  // Find the user by old email
+  const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers()
+  const user = authUsers?.users?.find(u => u.email?.toLowerCase() === oldEmail.toLowerCase())
 
-  if (error) {
-    console.error('Error updating customer:', error)
+  if (!user) {
+    console.log('No user found with email:', oldEmail)
     return
   }
 
-  if (data && data.length > 0) {
-    console.log('Successfully updated customer:', data[0])
+  // Update the user's email
+  const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
+    user.id,
+    { email: newEmail }
+  )
+
+  if (error) {
+    console.error('Error updating user email:', error)
+    return
+  }
+
+  console.log('Successfully updated user email:', data.user)
+
+  // Check if user has a subscription
+  const { data: subscription } = await supabaseAdmin
+    .from('subscriptions')
+    .select('*')
+    .eq('user_id', user.id)
+    .single()
+
+  if (subscription) {
+    console.log('User has subscription:', subscription)
   } else {
-    console.log('No customer found with email:', oldEmail)
+    console.log('User has no subscription record')
   }
 }
 
-updateCustomerEmail()
+updateUserEmail()
