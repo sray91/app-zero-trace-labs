@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '@/convex/_generated/api'
 import { useAuth } from '@/lib/contexts/AuthContext'
-import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -54,69 +55,47 @@ export default function WelcomePage() {
   const totalSteps = 4
   const progress = (currentStep / totalSteps) * 100
 
+  const profile = useQuery(api.users.getProfile)
+  const upsertProfile = useMutation(api.users.upsertProfile)
+
   useEffect(() => {
-    // Load existing profile data if any
-    const loadProfile = async () => {
-      if (!user) return
+    if (!profile) return
 
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single()
+    setFirstName(profile.firstName || '')
+    setLastName(profile.lastName || '')
+    setDateOfBirth(profile.dateOfBirth || '')
+    setPhoneNumber(profile.phoneNumber || '')
+    setAddressLine1(profile.addressLine1 || '')
+    setAddressLine2(profile.addressLine2 || '')
+    setCity(profile.city || '')
+    setState(profile.state || '')
+    setZipCode(profile.zipCode || '')
+    setPrivacyConsent(profile.privacyConsentGiven || false)
+    setTermsAccepted(profile.termsAccepted || false)
 
-      if (data && !error) {
-        setFirstName(data.first_name || '')
-        setLastName(data.last_name || '')
-        setDateOfBirth(data.date_of_birth || '')
-        setPhoneNumber(data.phone_number || '')
-        setAddressLine1(data.address_line1 || '')
-        setAddressLine2(data.address_line2 || '')
-        setCity(data.city || '')
-        setState(data.state || '')
-        setZipCode(data.zip_code || '')
-        setPrivacyConsent(data.privacy_consent_given || false)
-        setTermsAccepted(data.terms_accepted || false)
-
-        // If already completed, redirect to app
-        if (data.welcome_completed) {
-          router.push('/')
-        }
-      }
+    // If already completed, redirect to app
+    if (profile.welcomeCompleted) {
+      router.push('/')
     }
-
-    loadProfile()
-  }, [user, router])
+  }, [profile, router])
 
   const savePersonalInfo = async () => {
-    if (!user) return false
-
     setLoading(true)
     setError('')
 
     try {
-      const { error: updateError } = await supabase
-        .from('user_profiles')
-        .upsert({
-          user_id: user.id,
-          first_name: firstName,
-          last_name: lastName,
-          date_of_birth: dateOfBirth || null,
-          phone_number: phoneNumber || null,
-          address_line1: addressLine1,
-          address_line2: addressLine2 || null,
-          city: city,
-          state: state,
-          zip_code: zipCode,
-          welcome_step: 1
-        })
-
-      if (updateError) {
-        setError(updateError.message)
-        setLoading(false)
-        return false
-      }
-
+      await upsertProfile({
+        firstName,
+        lastName,
+        dateOfBirth: dateOfBirth || undefined,
+        phoneNumber: phoneNumber || undefined,
+        addressLine1,
+        addressLine2: addressLine2 || undefined,
+        city,
+        state,
+        zipCode,
+        welcomeStep: 1,
+      })
       return true
     } catch (err) {
       console.error('Error saving personal info:', err)
@@ -127,31 +106,17 @@ export default function WelcomePage() {
   }
 
   const completeWelcome = async () => {
-    if (!user) return false
-
     setLoading(true)
     setError('')
 
     try {
-      const { error: updateError } = await supabase
-        .from('user_profiles')
-        .upsert({
-          user_id: user.id,
-          privacy_consent_given: privacyConsent,
-          privacy_consent_date: privacyConsent ? new Date().toISOString() : null,
-          terms_accepted: termsAccepted,
-          terms_accepted_date: termsAccepted ? new Date().toISOString() : null,
-          tour_completed: true,
-          welcome_completed: true,
-          welcome_step: 4
-        })
-
-      if (updateError) {
-        setError(updateError.message)
-        setLoading(false)
-        return false
-      }
-
+      await upsertProfile({
+        privacyConsentGiven: privacyConsent,
+        termsAccepted,
+        tourCompleted: true,
+        welcomeCompleted: true,
+        welcomeStep: 4,
+      })
       return true
     } catch (err) {
       console.error('Error completing welcome:', err)

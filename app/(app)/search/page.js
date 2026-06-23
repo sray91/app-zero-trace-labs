@@ -131,7 +131,7 @@ export default function SearchPage() {
               Quick Search Unavailable
             </h1>
             <p className="text-gray-600 dark:text-gray-300 max-w-3xl">
-              Your Whop membership unlocks comprehensive scanning. Please use the comprehensive scan experience instead of the quick search.
+              Your paid plan unlocks comprehensive scanning. Please use the comprehensive scan experience instead of the quick search.
             </p>
           </div>
 
