@@ -1,9 +1,9 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
-// Public: the Clerk-hosted sign-in flow and API routes (which do their own checks).
+// Public: the Clerk-hosted sign-in/sign-up flow and API routes (which do their own checks).
 // The welcome-completion gate runs in the (app) layout, since Edge middleware can't
 // reach Convex.
-const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/api/(.*)'])
+const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/sign-up(.*)', '/api/(.*)'])
 
 export default clerkMiddleware(async (auth, req) => {
   if (!isPublicRoute(req)) {
