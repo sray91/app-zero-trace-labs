@@ -20,13 +20,49 @@ export async function getCurrentUser(
     .unique();
 }
 
-// Same as getCurrentUser but throws — use inside mutations that require auth.
+// Same as getCurrentUser but throws — use inside queries/read paths that require auth.
 export async function requireCurrentUser(
   ctx: QueryCtx | MutationCtx
 ): Promise<Doc<"users">> {
   const user = await getCurrentUser(ctx);
   if (!user) throw new Error("Not authenticated");
   return user;
+}
+
+// For mutations: resolve the user row for the authenticated Clerk identity, creating
+// it on first write if the Clerk webhook hasn't synced it yet. This avoids a race on
+// fresh sign-ups where the user reaches /welcome before `user.created` is delivered.
+export async function getOrCreateCurrentUser(
+  ctx: MutationCtx
+): Promise<Doc<"users">> {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) throw new Error("Not authenticated");
+
+  const existing = await ctx.db
+    .query("users")
+    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+    .unique();
+  if (existing) return existing;
+
+  const userId = await ctx.db.insert("users", {
+    clerkId: identity.subject,
+    email: identity.email,
+    name: identity.name,
+    imageUrl: identity.pictureUrl,
+  });
+
+  // Link any subscription that arrived (via RevenueCat) before the user existed.
+  const orphanSub = await ctx.db
+    .query("subscriptions")
+    .withIndex("by_rc_app_user_id", (q) =>
+      q.eq("revenueCatAppUserId", identity.subject)
+    )
+    .unique();
+  if (orphanSub && !orphanSub.userId) {
+    await ctx.db.patch(orphanSub._id, { userId });
+  }
+
+  return (await ctx.db.get(userId))!;
 }
 
 export const current = query({
@@ -65,7 +101,7 @@ export const upsertProfile = mutation({
     tourCompleted: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const user = await requireCurrentUser(ctx);
+    const user = await getOrCreateCurrentUser(ctx);
     const existing = await ctx.db
       .query("userProfiles")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
