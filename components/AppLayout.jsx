@@ -6,13 +6,17 @@ import { useQuery } from 'convex/react'
 import { Loader2 } from 'lucide-react'
 import { api } from '@/convex/_generated/api'
 import { Sidebar } from '@/components/Sidebar'
+import { useAuth } from '@/lib/contexts/AuthContext'
 
 export function AppLayout({ children }) {
   const router = useRouter()
+  const { isAdmin } = useAuth()
   // `undefined` = loading, `null` = no profile yet, object = profile exists.
   const profile = useQuery(api.users.getProfile)
 
-  const needsWelcome = profile === null || profile?.welcomeCompleted === false
+  // Admins manage the app, not their own removal profile — skip the welcome gate.
+  const needsWelcome =
+    !isAdmin && (profile === null || profile?.welcomeCompleted === false)
 
   useEffect(() => {
     if (needsWelcome) {

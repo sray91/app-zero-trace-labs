@@ -1,319 +1,247 @@
 'use client'
 
-import { useEffect } from 'react'
-import Link from 'next/link'
-import Image from 'next/image'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useQuery } from 'convex/react'
+import { format } from 'date-fns'
+import { api } from '@/convex/_generated/api'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
 import {
-  Search,
-  Shield,
-  History,
-  FileText,
-  Settings,
-  Loader2,
-  ArrowRight,
-  AlertTriangle
-} from 'lucide-react'
-import { useAuth } from '@/lib/contexts/AuthContext'
-import { useDataBroker } from '@/lib/hooks/useDataBroker'
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from '@/components/ui/table'
+import { Loader2, ShieldCheck, Clock, CheckCircle2, CircleDashed } from 'lucide-react'
 
-export default function Home() {
-  const {
-    user,
-    loading: authLoading,
-    planLabel,
-    isPaidPlan,
-    planLoading
-  } = useAuth()
-  const { searchHistory, removalRequests, dataSources, loadDataSources } = useDataBroker()
+const TIER_LABEL = {
+  1: 'Tier 1 – Crucial',
+  2: 'Tier 2 – High',
+  3: 'Tier 3 – Standard'
+}
 
-  // Initialize data sources when component mounts
-  useEffect(() => {
-    if (user && dataSources.length === 0) {
-      loadDataSources()
-    }
-  }, [user, dataSources.length, loadDataSources])
+const STATUS_LABEL = {
+  not_started: 'Not Started',
+  searched_not_found: 'Searched – Not Found',
+  searched_found: 'Searched – Found',
+  submitted: 'Opt-Out Submitted',
+  removed: 'Removal Confirmed',
+  reappeared: 'Re-appeared',
+  handled_by_service: 'Handled by Service',
+  skipped: 'Skipped'
+}
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-deep-void flex items-center justify-center">
+function statusVariant(status) {
+  if (status === 'removed' || status === 'handled_by_service') return 'default'
+  if (status === 'submitted' || status === 'searched_found') return 'secondary'
+  return 'outline'
+}
+
+// Static class strings (Tailwind JIT can't see dynamically built class names).
+const ACCENTS = {
+  'nuclear-blue': { border: 'border-nuclear-blue/20', text: 'text-nuclear-blue' },
+  'muted-gray': { border: 'border-muted-gray/20', text: 'text-muted-gray' },
+  'warning-yellow': { border: 'border-warning-yellow/20', text: 'text-warning-yellow' },
+  'success-green': { border: 'border-success-green/20', text: 'text-success-green' }
+}
+
+function StatCard({ label, value, sub, accent, icon: Icon }) {
+  const a = ACCENTS[accent] ?? ACCENTS['nuclear-blue']
+  return (
+    <Card className={`glass-card ${a.border}`}>
+      <CardContent className="pt-6">
         <div className="text-center">
-          <div className="mb-6 animate-pulse">
-            <Image
-              src="/zero-trace-labs-logo-dark.png"
-              alt="0TraceLabs"
-              width={120}
-              height={120}
-              className="mx-auto rounded-xl"
-            />
+          {Icon && <Icon className={`h-5 w-5 mx-auto mb-2 ${a.text}`} />}
+          <div className={`text-3xl font-bold font-outfit ${a.text} mb-1`}>
+            {value}
           </div>
-          <Loader2 className="h-6 w-6 animate-spin mx-auto mb-4 text-nuclear-blue" />
-          <p className="text-muted-gray font-medium">Loading...</p>
+          <div className="text-sm font-medium text-foreground">{label}</div>
+          {sub && <div className="text-xs text-muted-foreground mt-1">{sub}</div>}
         </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+export default function DashboardPage() {
+  const data = useQuery(api.dashboard.forCurrentUser)
+
+  if (data === undefined) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-nuclear-blue" />
       </div>
     )
   }
 
+  const { total, tierCounts, summary, completion, byTier, byCategory, tier1, lastUpdated } = data
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        {/* Hero Section */}
-        <div className="mb-8 text-center scan-lines py-6">
-          <div className="mb-4">
-            <Image
-              src="/zero-trace-labs-logo-dark.png"
-              alt="0TraceLabs"
-              width={100}
-              height={100}
-              className="mx-auto rounded-xl"
-            />
-          </div>
-          <h1 className="text-4xl md:text-5xl font-bold font-outfit text-foreground">
-            Welcome to 0TraceLabs
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold font-outfit text-foreground">
+            Data Removal Progress
           </h1>
+          <p className="text-muted-foreground mt-1">
+            Tracking {total} data brokers
+            {lastUpdated
+              ? ` · Last updated ${format(new Date(lastUpdated), 'MMM d, yyyy')}`
+              : ' · No activity yet'}
+          </p>
         </div>
 
-        {/* Privacy Notice */}
-        <Alert className="mb-8 max-w-4xl mx-auto border-nuclear-blue/30 bg-nuclear-blue/10">
-          <AlertTriangle className="h-4 w-4 text-nuclear-blue" />
-          <AlertDescription className="text-foreground">
-            <strong>Your Privacy Matters:</strong> We help you discover and remove your personal information from data brokers.
-            All searches are secure, and we never share your data without your consent.
-          </AlertDescription>
-        </Alert>
-
-        {/* Stats Cards */}
-        {user && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 max-w-4xl mx-auto">
-            <Card className="glass-card border-nuclear-blue/20">
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold font-outfit text-nuclear-blue mb-2">
-                    {searchHistory.length}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Total Searches
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="glass-card border-warning-yellow/20">
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold font-outfit text-warning-yellow mb-2">
-                    {removalRequests.length}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Removal Requests
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="glass-card border-success-green/20">
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold font-outfit text-success-green mb-2">
-                    {dataSources.length || '17+'}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Brokers Monitored
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Plan Indicator */}
-        {user && (
-          <div className="max-w-4xl mx-auto mb-6 text-center">
-            <Badge variant={isPaidPlan ? 'default' : 'secondary'}>
-              {planLoading ? 'Checking plan…' : `Current Plan: ${planLabel}`}
-            </Badge>
-          </div>
-        )}
-
-        {/* Quick Actions */}
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl md:text-3xl font-bold font-outfit text-foreground mb-6 text-center">
-            Quick Actions
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-            {/* Search Card (Free tier only) */}
-            {!isPaidPlan && (
-              <Card className="glass-card hover:shadow-lg hover:shadow-nuclear-blue/20 transition-all border-nuclear-blue/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center font-outfit">
-                    <Search className="h-5 w-5 mr-2 text-nuclear-blue" />
-                    Quick Search
-                    <Badge variant="secondary" className="ml-2">Free</Badge>
-                  </CardTitle>
-                  <CardDescription>
-                    Search for your information across data broker websites
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button asChild className="w-full btn-nuclear">
-                    <Link href="/search">
-                      Start Search
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Comprehensive Scan Card */}
-            <Card className="glass-card hover:shadow-lg hover:shadow-nuclear-blue/20 transition-all border-nuclear-blue/20">
-              <CardHeader>
-                <CardTitle className="flex items-center font-outfit">
-                  <Shield className="h-5 w-5 mr-2 text-nuclear-blue" />
-                  Comprehensive Scan
-                  {!isPaidPlan && <Badge variant="secondary" className="ml-2">Upgrade</Badge>}
-                </CardTitle>
-                <CardDescription>
-                  Deep scan across all {dataSources.length || '17+'} major data broker sites
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {user && isPaidPlan ? (
-                  <Button asChild className="w-full btn-nuclear">
-                    <Link href="/comprehensive">
-                      Start Scan
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Link>
-                  </Button>
-                ) : (
-                  <Button className="w-full btn-nuclear" disabled variant="secondary">
-                    {user ? 'Requires Paid Plan' : 'Sign in to continue'}
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                )}
-                {!isPaidPlan && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Unlock comprehensive scanning with a paid plan.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* History Card */}
-            <Card className="glass-card hover:shadow-lg hover:shadow-success-green/20 transition-all border-success-green/20">
-              <CardHeader>
-                <CardTitle className="flex items-center font-outfit">
-                  <History className="h-5 w-5 mr-2 text-success-green" />
-                  Search History
-                  {!isPaidPlan && <Badge variant="secondary" className="ml-2">Upgrade</Badge>}
-                </CardTitle>
-                <CardDescription>
-                  View your previous searches and results
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {user && isPaidPlan ? (
-                  <Button asChild className="w-full">
-                    <Link href="/history">
-                      View History
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Link>
-                  </Button>
-                ) : (
-                  <Button className="w-full" disabled variant="secondary">
-                    {user ? 'Requires Paid Plan' : 'Sign in to continue'}
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                )}
-                {!isPaidPlan && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Sign in with a paid plan to save and view search history.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Removal Requests Card */}
-            <Card className="glass-card hover:shadow-lg hover:shadow-warning-yellow/20 transition-all border-warning-yellow/20">
-              <CardHeader>
-                <CardTitle className="flex items-center font-outfit">
-                  <FileText className="h-5 w-5 mr-2 text-warning-yellow" />
-                  Removal Requests
-                  {!isPaidPlan && <Badge variant="secondary" className="ml-2">Upgrade</Badge>}
-                </CardTitle>
-                <CardDescription>
-                  Track your data removal requests
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {user && isPaidPlan ? (
-                  <Button asChild className="w-full btn-detonate">
-                    <Link href="/requests">
-                      View Requests
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Link>
-                  </Button>
-                ) : (
-                  <Button className="w-full btn-detonate" disabled variant="secondary">
-                    {user ? 'Requires Paid Plan' : 'Sign in to continue'}
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                )}
-                {!isPaidPlan && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Upgrade to submit and track removal requests.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Settings Card */}
-          {user && (
-            <Card className="glass-card border-muted-gray/20 mb-8">
-              <CardHeader>
-                <CardTitle className="flex items-center font-outfit">
-                  <Settings className="h-5 w-5 mr-2 text-muted-gray" />
-                  Account Settings
-                </CardTitle>
-                <CardDescription>
-                  Manage your account and preferences
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button asChild variant="outline" className="w-full border-muted-gray/30 hover:bg-muted-gray/10">
-                  <Link href="/settings">
-                    Open Settings
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Sign In CTA */}
-          {!user && (
-            <Card className="glass-card border-nuclear-blue/30 bg-nuclear-blue/10">
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <h3 className="text-lg font-semibold font-outfit text-foreground mb-2">
-                    Sign in to unlock all features
-                  </h3>
-                  <p className="text-muted-foreground mb-4">
-                    Get access to comprehensive scanning, search history, and removal request tracking
-                  </p>
-                  <Button onClick={() => setShowAuthDialog(true)} className="btn-nuclear">
-                    Sign In / Sign Up
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+        {/* Summary stat cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <StatCard label="Total Brokers" value={total} sub="In your tracker" accent="nuclear-blue" icon={ShieldCheck} />
+          <StatCard label="Not Started" value={summary.notStarted} sub="Pending action" accent="muted-gray" icon={CircleDashed} />
+          <StatCard label="Opt-Outs Submitted" value={summary.submitted} sub="Awaiting confirmation" accent="warning-yellow" icon={Clock} />
+          <StatCard label="Confirmed Removed" value={summary.removed} sub="Verified clean" accent="success-green" icon={CheckCircle2} />
         </div>
+
+        {/* Overall completion */}
+        <Card className="glass-card border-nuclear-blue/20 mb-8">
+          <CardHeader>
+            <CardTitle className="font-outfit text-lg">Overall Completion Rate</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-muted-foreground">Confirmed removed</span>
+                <span className="font-medium text-success-green">{completion.removedPct}%</span>
+              </div>
+              <Progress value={completion.removedPct} className="h-2" />
+            </div>
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-muted-foreground">Opt-outs submitted</span>
+                <span className="font-medium text-warning-yellow">{completion.submittedPct}%</span>
+              </div>
+              <Progress value={completion.submittedPct} className="h-2" />
+            </div>
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-muted-foreground">Not yet started</span>
+                <span className="font-medium text-muted-foreground">{completion.notStartedPct}%</span>
+              </div>
+              <Progress value={completion.notStartedPct} className="h-2" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Tier counts */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          {[1, 2, 3].map((tier) => (
+            <Card key={tier} className="glass-card">
+              <CardContent className="pt-6 text-center">
+                <div className="text-2xl font-bold font-outfit text-foreground">{tierCounts[tier] ?? 0}</div>
+                <div className="text-sm text-muted-foreground">{TIER_LABEL[tier]}</div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Status breakdown by tier */}
+        <Card className="glass-card mb-8">
+          <CardHeader>
+            <CardTitle className="font-outfit text-lg">Status Breakdown by Tier</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tier</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">Not Started</TableHead>
+                  <TableHead className="text-right">Searched – Found</TableHead>
+                  <TableHead className="text-right">Submitted</TableHead>
+                  <TableHead className="text-right">Removed</TableHead>
+                  <TableHead className="text-right">Handled by Service</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {byTier.map((row) => (
+                  <TableRow key={row.tier}>
+                    <TableCell className="font-medium">{TIER_LABEL[row.tier]}</TableCell>
+                    <TableCell className="text-right">{row.total}</TableCell>
+                    <TableCell className="text-right">{row.notStarted}</TableCell>
+                    <TableCell className="text-right">{row.searchedFound}</TableCell>
+                    <TableCell className="text-right">{row.submitted}</TableCell>
+                    <TableCell className="text-right text-success-green">{row.removed}</TableCell>
+                    <TableCell className="text-right">{row.handledByService}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* Brokers by category */}
+        <Card className="glass-card mb-8">
+          <CardHeader>
+            <CardTitle className="font-outfit text-lg">Brokers by Category</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Category</TableHead>
+                  <TableHead className="text-right">Count</TableHead>
+                  <TableHead className="text-right">Confirmed Removed</TableHead>
+                  <TableHead className="text-right">% Complete</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {byCategory.map((row) => (
+                  <TableRow key={row.category}>
+                    <TableCell className="font-medium">{row.category}</TableCell>
+                    <TableCell className="text-right">{row.count}</TableCell>
+                    <TableCell className="text-right">{row.removed}</TableCell>
+                    <TableCell className="text-right">{row.pct}%</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* Tier 1 quick reference */}
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle className="font-outfit text-lg">Tier 1 – Crucial Brokers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Broker</TableHead>
+                  <TableHead>Difficulty</TableHead>
+                  <TableHead className="text-right">Est. Days</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Verified</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tier1.map((row) => (
+                  <TableRow key={row.name}>
+                    <TableCell className="font-medium">{row.name}</TableCell>
+                    <TableCell>{row.difficulty ?? '—'}</TableCell>
+                    <TableCell className="text-right">{row.estProcessingDays ?? '—'}</TableCell>
+                    <TableCell>
+                      <Badge variant={statusVariant(row.status)}>
+                        {STATUS_LABEL[row.status] ?? row.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{row.verified ? 'Yes' : 'No'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

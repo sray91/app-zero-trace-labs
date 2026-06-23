@@ -29,6 +29,16 @@ export async function requireCurrentUser(
   return user;
 }
 
+// Throws unless the authenticated user is an admin. The `role` is synced from Clerk
+// publicMetadata.role by the webhook (convex/http.ts). Use to guard admin functions.
+export async function requireAdmin(
+  ctx: QueryCtx | MutationCtx
+): Promise<Doc<"users">> {
+  const user = await requireCurrentUser(ctx);
+  if (user.role !== "admin") throw new Error("Not authorized");
+  return user;
+}
+
 // For mutations: resolve the user row for the authenticated Clerk identity, creating
 // it on first write if the Clerk webhook hasn't synced it yet. This avoids a race on
 // fresh sign-ups where the user reaches /welcome before `user.created` is delivered.
@@ -68,6 +78,16 @@ export async function getOrCreateCurrentUser(
 export const current = query({
   args: {},
   handler: async (ctx) => getCurrentUser(ctx),
+});
+
+// Server-truth admin check for layout guards (client also gates instantly via Clerk
+// publicMetadata, but Convex mutations enforce this regardless).
+export const isAdmin = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getCurrentUser(ctx);
+    return user?.role === "admin";
+  },
 });
 
 export const getProfile = query({
@@ -131,6 +151,7 @@ export const upsertFromClerk = internalMutation({
     email: v.optional(v.string()),
     name: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
+    role: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
@@ -143,6 +164,7 @@ export const upsertFromClerk = internalMutation({
         email: args.email,
         name: args.name,
         imageUrl: args.imageUrl,
+        role: args.role,
       });
       return existing._id;
     }
@@ -152,6 +174,7 @@ export const upsertFromClerk = internalMutation({
       email: args.email,
       name: args.name,
       imageUrl: args.imageUrl,
+      role: args.role,
     });
 
     // Link any subscription that arrived (via RevenueCat) before the user existed.

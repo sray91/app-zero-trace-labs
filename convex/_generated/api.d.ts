@@ -8,7 +8,10 @@
  * @module
  */
 
+import type * as admin from "../admin.js";
 import type * as brokerExposures from "../brokerExposures.js";
+import type * as brokerSeed from "../brokerSeed.js";
+import type * as dashboard from "../dashboard.js";
 import type * as dataSources from "../dataSources.js";
 import type * as http from "../http.js";
 import type * as removalRequests from "../removalRequests.js";
@@ -23,7 +26,10 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  admin: typeof admin;
   brokerExposures: typeof brokerExposures;
+  brokerSeed: typeof brokerSeed;
+  dashboard: typeof dashboard;
   dataSources: typeof dataSources;
   http: typeof http;
   removalRequests: typeof removalRequests;
