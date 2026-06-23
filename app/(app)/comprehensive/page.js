@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/lib/contexts/AuthContext'
 import { useDataBroker } from '@/lib/hooks/useDataBroker'
+import { UpgradeButton } from '@/components/UpgradeButton'
 
 // Helper function to format address objects or strings
 const formatAddress = (address) => {
@@ -147,7 +148,7 @@ export default function ComprehensivePage() {
               <Shield className="h-12 w-12 text-nuclear-blue mx-auto" />
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Sign In Required</h1>
               <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-                Comprehensive scanning is available only for authenticated Whop members. Please sign in to continue.
+                Comprehensive scanning is available only for authenticated members. Please sign in to continue.
               </p>
               <Button
                 className="btn-nuclear mx-auto"
@@ -172,14 +173,9 @@ export default function ComprehensivePage() {
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Upgrade Required</h1>
               <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
                 Your current plan ({planLabel || 'Free Plan'}) does not include comprehensive scanning.
-                Upgrade via Whop to unlock automated deep scans across all broker tiers.
+                Upgrade to unlock automated deep scans across all broker tiers.
               </p>
-              <Button
-                className="btn-nuclear mx-auto"
-                onClick={() => window.open('https://whop.com/', '_blank', 'noopener,noreferrer')}
-              >
-                Upgrade on Whop
-              </Button>
+              <UpgradeButton className="btn-nuclear mx-auto">Upgrade</UpgradeButton>
             </CardContent>
           </Card>
         </div>

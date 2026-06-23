@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { History } from 'lucide-react'
 import { useDataBroker } from '@/lib/hooks/useDataBroker'
 import { useAuth } from '@/lib/contexts/AuthContext'
+import { UpgradeButton } from '@/components/UpgradeButton'
 
 const UpgradeRequired = ({ planLabel }) => (
   <Card className="bg-white dark:bg-gray-800 shadow-sm">
@@ -14,12 +15,7 @@ const UpgradeRequired = ({ planLabel }) => (
       <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
         Search history is available for paid plans. Your current plan ({planLabel || 'Free Plan'}) does not support history tracking.
       </p>
-      <Button
-        className="btn-nuclear mx-auto"
-        onClick={() => window.open('https://whop.com/', '_blank', 'noopener,noreferrer')}
-      >
-        Upgrade on Whop
-      </Button>
+      <UpgradeButton className="btn-nuclear mx-auto">Upgrade</UpgradeButton>
     </CardContent>
   </Card>
 )
@@ -30,7 +26,7 @@ const SignInRequired = () => (
       <History className="h-12 w-12 text-success-green mx-auto" />
       <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Sign In Required</h1>
       <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-        Please sign in with your Whop-connected account to view your saved search history.
+        Please sign in to view your saved search history.
       </p>
       <Button
         className="btn-nuclear mx-auto"

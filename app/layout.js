@@ -1,6 +1,8 @@
 import { Inter, Outfit } from 'next/font/google'
+import { ClerkProvider } from '@clerk/nextjs'
 import './globals.css'
-import { AuthProvider } from '@/lib/contexts/AuthContext'
+import { ConvexClientProvider } from '@/components/providers/ConvexClientProvider'
+import { Toaster } from '@/components/ui/sonner'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -30,12 +32,15 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.variable} ${outfit.variable} font-sans`}>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" className="dark">
+        <body className={`${inter.variable} ${outfit.variable} font-sans`}>
+          <ConvexClientProvider>
+            {children}
+            <Toaster />
+          </ConvexClientProvider>
+        </body>
+      </html>
+    </ClerkProvider>
   )
 }

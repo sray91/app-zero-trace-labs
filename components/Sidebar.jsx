@@ -18,6 +18,7 @@ import {
   Shield,
   FileText,
   Home,
+  ListChecks,
   Menu,
   X
 } from 'lucide-react'
@@ -44,6 +45,14 @@ const navigation = [
     description: 'Deep scan across all brokers',
     requiresAuth: true,
     requiresPaidPlan: true,
+    planVisibility: 'all'
+  },
+  {
+    name: 'Exposure Tracker',
+    href: '/exposure',
+    icon: ListChecks,
+    description: 'Track broker exposures and removals',
+    requiresAuth: true,
     planVisibility: 'all'
   },
   {
