@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { FileText } from 'lucide-react'
 import { useDataBroker } from '@/lib/hooks/useDataBroker'
 import { useAuth } from '@/lib/contexts/AuthContext'
+import { UpgradeButton } from '@/components/UpgradeButton'
 
 const UpgradeNotice = ({ planLabel }) => (
   <Card className="bg-white dark:bg-gray-800 shadow-sm">
@@ -13,14 +14,9 @@ const UpgradeNotice = ({ planLabel }) => (
       <FileText className="h-12 w-12 text-warning-yellow mx-auto" />
       <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Upgrade Required</h1>
       <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-        Removal request tracking is unlocked on paid Whop plans. Your current plan ({planLabel || 'Free Plan'}) does not include this feature.
+        Removal request tracking is unlocked on paid plans. Your current plan ({planLabel || 'Free Plan'}) does not include this feature.
       </p>
-      <Button
-        className="btn-nuclear mx-auto"
-        onClick={() => window.open('https://whop.com/', '_blank', 'noopener,noreferrer')}
-      >
-        Upgrade on Whop
-      </Button>
+      <UpgradeButton className="btn-nuclear mx-auto">Upgrade</UpgradeButton>
     </CardContent>
   </Card>
 )
@@ -31,7 +27,7 @@ const SignInNotice = () => (
       <FileText className="h-12 w-12 text-warning-yellow mx-auto" />
       <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Sign In Required</h1>
       <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-        Please sign in to manage your Whop-linked removal requests.
+        Please sign in to manage your removal requests.
       </p>
       <Button
         className="btn-nuclear mx-auto"

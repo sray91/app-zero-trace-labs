@@ -175,7 +175,7 @@ export default function Home() {
                 <CardTitle className="flex items-center font-outfit">
                   <Shield className="h-5 w-5 mr-2 text-nuclear-blue" />
                   Comprehensive Scan
-                  {!isPaidPlan && <Badge variant="secondary" className="ml-2">Whop Upgrade</Badge>}
+                  {!isPaidPlan && <Badge variant="secondary" className="ml-2">Upgrade</Badge>}
                 </CardTitle>
                 <CardDescription>
                   Deep scan across all {dataSources.length || '17+'} major data broker sites
@@ -197,7 +197,7 @@ export default function Home() {
                 )}
                 {!isPaidPlan && (
                   <p className="text-xs text-muted-foreground mt-2">
-                    Unlock comprehensive scanning with a Whop membership.
+                    Unlock comprehensive scanning with a paid plan.
                   </p>
                 )}
               </CardContent>
@@ -209,7 +209,7 @@ export default function Home() {
                 <CardTitle className="flex items-center font-outfit">
                   <History className="h-5 w-5 mr-2 text-success-green" />
                   Search History
-                  {!isPaidPlan && <Badge variant="secondary" className="ml-2">Whop Upgrade</Badge>}
+                  {!isPaidPlan && <Badge variant="secondary" className="ml-2">Upgrade</Badge>}
                 </CardTitle>
                 <CardDescription>
                   View your previous searches and results
@@ -243,7 +243,7 @@ export default function Home() {
                 <CardTitle className="flex items-center font-outfit">
                   <FileText className="h-5 w-5 mr-2 text-warning-yellow" />
                   Removal Requests
-                  {!isPaidPlan && <Badge variant="secondary" className="ml-2">Whop Upgrade</Badge>}
+                  {!isPaidPlan && <Badge variant="secondary" className="ml-2">Upgrade</Badge>}
                 </CardTitle>
                 <CardDescription>
                   Track your data removal requests
@@ -265,7 +265,7 @@ export default function Home() {
                 )}
                 {!isPaidPlan && (
                   <p className="text-xs text-muted-foreground mt-2">
-                    Upgrade on Whop to submit and track removal requests.
+                    Upgrade to submit and track removal requests.
                   </p>
                 )}
               </CardContent>
