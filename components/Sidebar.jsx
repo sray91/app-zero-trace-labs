@@ -9,78 +9,30 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useAuth } from '@/lib/contexts/AuthContext'
 import {
-  Search,
-  History,
   Settings,
   ChevronLeft,
   ChevronRight,
   LogOut,
-  Shield,
-  FileText,
-  Home,
-  ListChecks,
+  ShieldCheck,
+  LayoutDashboard,
   Menu,
   X
 } from 'lucide-react'
 
+// Regular users see only their progress dashboard and settings. Admins get an
+// extra link into the admin console (the rest of the admin nav lives there).
 const navigation = [
   {
     name: 'Dashboard',
     href: '/',
-    icon: Home,
-    description: 'Search and monitor your data',
-    planVisibility: 'all'
-  },
-  {
-    name: 'Search',
-    href: '/search',
-    icon: Search,
-    description: 'Quick data broker search',
-    planVisibility: 'freeOnly'
-  },
-  {
-    name: 'Comprehensive Scan',
-    href: '/comprehensive',
-    icon: Shield,
-    description: 'Deep scan across all brokers',
-    requiresAuth: true,
-    requiresPaidPlan: true,
-    planVisibility: 'all'
-  },
-  {
-    name: 'Exposure Tracker',
-    href: '/exposure',
-    icon: ListChecks,
-    description: 'Track broker exposures and removals',
-    requiresAuth: true,
-    planVisibility: 'all'
-  },
-  {
-    name: 'History',
-    href: '/history',
-    icon: History,
-    description: 'View search history',
-    requiresAuth: true,
-    requiresPaidPlan: true,
-    planVisibility: 'all'
-  },
-  {
-    name: 'Removal Requests',
-    href: '/requests',
-    icon: FileText,
-    description: 'Track removal requests',
-    requiresAuth: true,
-    requiresPaidPlan: true,
-    planVisibility: 'all'
+    icon: LayoutDashboard,
+    description: 'Your data removal progress'
   },
   {
     name: 'Settings',
     href: '/settings',
     icon: Settings,
-    description: 'Account settings',
-    requiresAuth: true,
-    requiresPaidPlan: true,
-    planVisibility: 'all'
+    description: 'Account settings'
   }
 ]
 
@@ -88,7 +40,7 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const pathname = usePathname()
-  const { user, signOut, planLabel, isPaidPlan } = useAuth()
+  const { user, signOut, planLabel, isAdmin } = useAuth()
 
   const handleSignOut = async () => {
     try {
@@ -156,36 +108,19 @@ export function Sidebar() {
       {/* Navigation Links */}
       <nav className="flex-1 overflow-y-auto p-4 space-y-1">
         {navigation.map((item) => {
-          const isHidden =
-            (item.planVisibility === 'freeOnly' && isPaidPlan) ||
-            (item.planVisibility === 'paidOnly' && !isPaidPlan)
-          if (isHidden) {
-            return null
-          }
-
           const isActive = pathname === item.href ||
             (item.href !== '/' && pathname.startsWith(item.href))
-          const lacksAuth = item.requiresAuth && !user
-          const planRestricted = item.requiresPaidPlan && !isPaidPlan
-          const isDisabled = lacksAuth || planRestricted
 
           return (
             <Link
               key={item.name}
-              href={isDisabled ? '#' : item.href}
-              onClick={(e) => {
-                if (isDisabled) {
-                  e.preventDefault()
-                  return
-                }
-                setMobileOpen(false)
-              }}
+              href={item.href}
+              onClick={() => setMobileOpen(false)}
               className={cn(
                 "flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all",
                 "hover:bg-nuclear-blue/10",
                 isActive && "bg-nuclear-blue/10 text-nuclear-blue border border-nuclear-blue/20",
                 !isActive && "text-foreground",
-                isDisabled && "opacity-50 cursor-not-allowed",
                 collapsed && "justify-center"
               )}
               title={collapsed ? item.name : item.description}
@@ -194,17 +129,27 @@ export function Sidebar() {
                 "h-5 w-5 flex-shrink-0",
                 isActive && "text-nuclear-blue"
               )} />
-              {!collapsed && (
-                <span className="flex-1">{item.name}</span>
-              )}
-              {!collapsed && isDisabled && (
-                <span className="text-xs text-muted-foreground">
-                  {planRestricted ? 'Upgrade' : 'Sign in'}
-                </span>
-              )}
+              {!collapsed && <span className="flex-1">{item.name}</span>}
             </Link>
           )
         })}
+
+        {/* Admin console entry (only for admins) */}
+        {isAdmin && (
+          <Link
+            href="/admin"
+            onClick={() => setMobileOpen(false)}
+            className={cn(
+              "flex items-center space-x-3 px-3 py-2 mt-2 rounded-lg text-sm font-medium transition-all",
+              "border border-warning-yellow/30 text-warning-yellow hover:bg-warning-yellow/10",
+              collapsed && "justify-center"
+            )}
+            title="Admin Console"
+          >
+            <ShieldCheck className="h-5 w-5 flex-shrink-0" />
+            {!collapsed && <span className="flex-1">Admin Console</span>}
+          </Link>
+        )}
       </nav>
 
       {/* User Section */}

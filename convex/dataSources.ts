@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { BROKER_SEED, riskForTier } from "./brokerSeed";
 
 export const list = query({
   args: {},
@@ -10,45 +11,6 @@ export const list = query({
       .collect();
   },
 });
-
-const SEED = [
-  {
-    name: "Spokeo",
-    url: "https://spokeo.com",
-    riskLevel: "high",
-    description:
-      "Comprehensive people search with detailed personal information",
-    dataTypes: ["name", "age", "address", "phone", "email", "relatives", "social_media"],
-  },
-  {
-    name: "WhitePages",
-    url: "https://whitepages.com",
-    riskLevel: "medium",
-    description: "Contact information and address history lookup",
-    dataTypes: ["name", "phone", "address", "address_history"],
-  },
-  {
-    name: "BeenVerified",
-    url: "https://beenverified.com",
-    riskLevel: "medium",
-    description: "Background checks and social media profiles",
-    dataTypes: ["name", "email", "social_media", "criminal_records", "education"],
-  },
-  {
-    name: "TruePeopleSearch",
-    url: "https://truepeoplesearch.com",
-    riskLevel: "low",
-    description: "Basic public records and contact information",
-    dataTypes: ["name", "address", "phone", "relatives"],
-  },
-  {
-    name: "Intelius",
-    url: "https://intelius.com",
-    riskLevel: "high",
-    description: "Deep background searches and public records",
-    dataTypes: ["name", "address", "phone", "criminal_records", "court_records", "property_records"],
-  },
-];
 
 export const add = mutation({
   args: {
@@ -73,18 +35,57 @@ export const add = mutation({
   },
 });
 
-// One-off: `npx convex run dataSources:seed`
-export const seed = mutation({
+// Seed/refresh the full 93-broker catalog from convex/brokerSeed.ts. Idempotent:
+// upserts by name. Run once: `npx convex run dataSources:seedBrokers`.
+export const seedBrokers = mutation({
   args: {},
   handler: async (ctx) => {
     const existing = await ctx.db.query("dataSources").collect();
-    const existingNames = new Set(existing.map((d) => d.name));
+    const byName = new Map(existing.map((d) => [d.name, d]));
+    const seedNames = new Set(BROKER_SEED.map((b) => b.name));
+
     let added = 0;
-    for (const source of SEED) {
-      if (existingNames.has(source.name)) continue;
-      await ctx.db.insert("dataSources", { ...source, isActive: true });
-      added++;
+    let updated = 0;
+    let deactivated = 0;
+
+    // Retire legacy/duplicate rows not in the canonical catalog so counts stay exact.
+    for (const row of existing) {
+      if (!seedNames.has(row.name) && row.isActive) {
+        await ctx.db.patch(row._id, { isActive: false });
+        deactivated++;
+      }
     }
-    return { added };
+
+    for (const b of BROKER_SEED) {
+      const fields = {
+        url: b.searchUrl ?? b.optOutUrl ?? "",
+        riskLevel: riskForTier(b.tier),
+        isActive: true,
+        tier: b.tier,
+        category: b.category,
+        searchUrl: b.searchUrl,
+        optOutUrl: b.optOutUrl,
+        optOutMethod: b.optOutMethod,
+        difficulty: b.difficulty,
+        estProcessingDays: b.estProcessingDays,
+        alsoCovers: b.alsoCovers,
+        parentCompany: b.parentCompany,
+        instructions: b.instructions,
+      };
+
+      const current = byName.get(b.name);
+      if (current) {
+        await ctx.db.patch(current._id, fields);
+        updated++;
+      } else {
+        await ctx.db.insert("dataSources", {
+          name: b.name,
+          dataTypes: [],
+          ...fields,
+        });
+        added++;
+      }
+    }
+    return { added, updated, deactivated, total: BROKER_SEED.length };
   },
 });

@@ -40,11 +40,17 @@ http.route({
       const name =
         [data.first_name, data.last_name].filter(Boolean).join(" ") || undefined;
 
+      const role =
+        typeof data.public_metadata?.role === "string"
+          ? data.public_metadata.role
+          : undefined;
+
       await ctx.runMutation(internal.users.upsertFromClerk, {
         clerkId: data.id,
         email,
         name,
         imageUrl: data.image_url ?? undefined,
+        role,
       });
     } else if (type === "user.deleted") {
       if (data.id) {

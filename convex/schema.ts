@@ -11,6 +11,9 @@ export default defineSchema({
     email: v.optional(v.string()),
     name: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
+    // Synced from Clerk publicMetadata.role by the Clerk webhook (convex/http.ts).
+    // "admin" unlocks the admin console; absent/anything else = regular user.
+    role: v.optional(v.string()),
   }).index("by_clerk_id", ["clerkId"]),
 
   // Entitlement state, kept in sync by the RevenueCat webhook (see convex/http.ts).
@@ -53,6 +56,8 @@ export default defineSchema({
     tourCompleted: v.optional(v.boolean()),
   }).index("by_user", ["userId"]),
 
+  // The broker catalog. Static, shared across all users. Mirrors the spreadsheet's
+  // "Master Tracker" static columns; per-user removal state lives in brokerExposures.
   dataSources: defineTable({
     name: v.string(),
     url: v.string(),
@@ -61,15 +66,29 @@ export default defineSchema({
     description: v.optional(v.string()),
     dataTypes: v.array(v.string()),
     isActive: v.boolean(),
+    // Master Tracker catalog fields (optional so the legacy 5-row seed still validates).
+    tier: v.optional(v.number()), // 1 = Crucial, 2 = High, 3 = Standard
+    category: v.optional(v.string()),
+    searchUrl: v.optional(v.string()),
+    optOutUrl: v.optional(v.string()),
+    optOutMethod: v.optional(v.string()),
+    difficulty: v.optional(v.string()), // Easy | Medium | Hard
+    estProcessingDays: v.optional(v.number()),
+    alsoCovers: v.optional(v.string()),
+    parentCompany: v.optional(v.string()),
+    instructions: v.optional(v.string()),
   })
     .index("by_name", ["name"])
-    .index("by_active", ["isActive"]),
+    .index("by_active", ["isActive"])
+    .index("by_tier", ["tier"]),
 
   brokerExposures: defineTable({
     userId: v.id("users"),
     dataSourceId: v.id("dataSources"),
     exposureStatus: v.string(), // unchecked | found | not_found
-    removalStatus: v.string(), // not_started | in_progress | submitted | removed | reappeared
+    // not_started | searched_not_found | searched_found | submitted | removed |
+    // reappeared | handled_by_service | skipped (drives the user dashboard breakdown)
+    removalStatus: v.string(),
     listingUrl: v.optional(v.string()),
     confirmationRef: v.optional(v.string()),
     checklist: v.optional(v.any()),
@@ -99,4 +118,20 @@ export default defineSchema({
     status: v.string(), // pending | submitted | completed | failed
     notes: v.optional(v.string()),
   }).index("by_user", ["userId"]),
+
+  // Free-form to-do items an admin tracks per user (e.g. "call MyLife", "follow up
+  // Radaris"). Separate from brokerExposures, which is the per-broker removal state.
+  userTasks: defineTable({
+    userId: v.id("users"),
+    title: v.string(),
+    description: v.optional(v.string()),
+    status: v.string(), // open | in_progress | done
+    priority: v.optional(v.string()), // low | medium | high
+    dueDate: v.optional(v.number()),
+    relatedDataSourceId: v.optional(v.id("dataSources")),
+    createdByClerkId: v.optional(v.string()),
+    completedAt: v.optional(v.number()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_and_status", ["userId", "status"]),
 });
