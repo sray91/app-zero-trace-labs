@@ -14,7 +14,34 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table'
-import { Loader2, ChevronRight } from 'lucide-react'
+import {
+  Loader2,
+  ChevronRight,
+  ShieldCheck,
+  Users as UsersIcon,
+  CheckCircle2,
+  Clock,
+  ListTodo
+} from 'lucide-react'
+
+function StatCard({ label, value, sub, icon: Icon }) {
+  return (
+    <Card className="glass-card border-warning-yellow/20">
+      <CardContent className="pt-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning-yellow/10">
+            <Icon className="h-5 w-5 text-warning-yellow" />
+          </div>
+          <div>
+            <div className="text-2xl font-bold font-outfit text-foreground leading-none">{value}</div>
+            <div className="text-xs text-muted-foreground mt-1">{label}</div>
+          </div>
+        </div>
+        {sub && <div className="text-xs text-muted-foreground mt-3">{sub}</div>}
+      </CardContent>
+    </Card>
+  )
+}
 
 export default function AdminUsersPage() {
   const users = useQuery(api.admin.listUsers)
@@ -27,14 +54,42 @@ export default function AdminUsersPage() {
     )
   }
 
+  // Fleet-wide aggregates — what makes this an admin console rather than a
+  // single-user dashboard.
+  const totalUsers = users.length
+  const totalRemoved = users.reduce((s, u) => s + u.removed, 0)
+  const totalSubmitted = users.reduce((s, u) => s + u.submitted, 0)
+  const totalOpenTasks = users.reduce((s, u) => s + u.openTasks, 0)
+  const avgProgress = totalUsers
+    ? Math.round(users.reduce((s, u) => s + u.progressPct, 0) / totalUsers)
+    : 0
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold font-outfit text-foreground">Users</h1>
+      {/* Console identity banner — visually distinct from the user dashboard */}
+      <div className="mb-8 rounded-xl border border-warning-yellow/30 bg-warning-yellow/5 p-5">
+        <div className="flex items-center gap-2 text-warning-yellow">
+          <ShieldCheck className="h-5 w-5" />
+          <span className="text-xs font-semibold uppercase tracking-widest">Admin Console</span>
+        </div>
+        <h1 className="text-3xl font-bold font-outfit text-foreground mt-1">User Management</h1>
         <p className="text-muted-foreground mt-1">
-          {users.length} {users.length === 1 ? 'user' : 'users'} — track and update each user's removal progress.
+          Oversee every client's removal progress, update their records, and run the per-user SOP.
         </p>
       </div>
+
+      {/* Fleet overview */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <StatCard label="Clients" value={totalUsers} icon={UsersIcon} />
+        <StatCard label="Avg Progress" value={`${avgProgress}%`} icon={ShieldCheck} />
+        <StatCard label="Confirmed Removed" value={totalRemoved} icon={CheckCircle2} />
+        <StatCard label="Opt-Outs Submitted" value={totalSubmitted} icon={Clock} />
+        <StatCard label="Open Tasks" value={totalOpenTasks} icon={ListTodo} />
+      </div>
+
+      <h2 className="text-lg font-semibold font-outfit text-foreground mb-3">
+        All Clients ({totalUsers})
+      </h2>
 
       <Card className="glass-card">
         <CardContent className="p-0">
@@ -81,7 +136,7 @@ export default function AdminUsersPage() {
                   </TableRow>
                 )
               })}
-              {users.length === 0 && (
+              {totalUsers === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                     No users yet.
