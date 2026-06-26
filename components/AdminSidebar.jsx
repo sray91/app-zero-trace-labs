@@ -11,6 +11,7 @@ import { useAuth } from '@/lib/contexts/AuthContext'
 import {
   Users,
   Database,
+  BookOpen,
   LayoutDashboard,
   LogOut,
   ChevronLeft,
@@ -22,6 +23,7 @@ import {
 const navigation = [
   { name: 'Users', href: '/admin', icon: Users, exact: true },
   { name: 'Broker Catalog', href: '/admin/brokers', icon: Database },
+  { name: 'Instructions & SOP', href: '/admin/instructions', icon: BookOpen },
   { name: 'User Dashboard', href: '/', icon: LayoutDashboard }
 ]
 
