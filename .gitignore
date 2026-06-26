@@ -24,3 +24,4 @@ yarn-error.log*
 # Local env files
 .env*.local
 config.bat
+.vercel
