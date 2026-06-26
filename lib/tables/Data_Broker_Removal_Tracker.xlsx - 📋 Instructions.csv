@@ -1,0 +1,42 @@
+DATA BROKER REMOVAL TRACKING SYSTEM — HOW TO USE THIS WORKBOOK,,
+US-Focused | 93 Data Brokers | 9 Paid Services | Built June 2026,,
+,,
+,OVERVIEW,
+,,
+,TAB GUIDE,
+,📋 Instructions (this tab),Start here. Read before using.
+,📊 Dashboard,"High-level progress view. Shows completion %, broker counts by tier and status. Update automatically as you fill in the Master Tracker."
+,🎯 Master Tracker,The core of the system. One row per broker. Fill in columns N–U as you work through each removal. This is your primary working document.
+,🤖 Paid Services,Comparison of 9 automated removal services. Use this to decide which service(s) to subscribe to as your 'always-on' layer.
+,🔍 Search Log,"Log every search you perform on each broker site. Record whether your data was found, what was found, and the profile URL. Critical for tracking."
+,📅 Maintenance Calendar,Recurring opt-out schedule. Data reappears every 3–6 months. Use this to plan quarterly re-checks.
+,,
+,HOW TO START,
+,Step 1 — Subscribe to paid services,Go to the 🤖 Paid Services tab. Choose at least one automated service (recommendation: Incogni + Optery together for maximum coverage). Subscribe and set up your profile. This handles the bulk of brokers automatically.
+,Step 2 — Work Tier 1 manually,Go to 🎯 Master Tracker. Filter by 'Tier 1 – Crucial'. These 16 brokers are the most visible and must be done manually even if you use a paid service. Work through them in order.
+,Step 3 — Log every search,"For each broker, go to the site, search for yourself, and log the result in 🔍 Search Log. Record whether data was found and the profile URL. This is your evidence trail."
+,Step 4 — Submit opt-outs,"Follow the opt-out method in column H of the Master Tracker. After submitting, update the Status (col N), Date Submitted (col O), and Confirmation # (col P)."
+,Step 5 — Verify removal,"After the processing time (col J), return to the site and verify your data is gone. Update Verified Removed (col Q) and Date Verified (col R)."
+,Step 6 — Set re-check reminders,Data reappears. Use the 📅 Maintenance Calendar to schedule quarterly re-checks. Most brokers need re-checking every 3–4 months.
+,,
+,STATUS FIELD VALUES,
+,Not Started,You have not yet visited this broker or submitted an opt-out.
+,Searched – Not Found,You searched and your data was NOT present. No action needed now.
+,Searched – Found,Your data IS present. Opt-out has not yet been submitted.
+,Opt-Out Submitted,You have submitted the opt-out request and are waiting for processing.
+,Removal Confirmed,You have verified that your data has been removed from this broker.
+,Re-appeared – Action Needed,Data was removed but has re-appeared. Re-submit opt-out.
+,Handled by Paid Service,This broker is covered by your automated removal service subscription.
+,Skipped / N/A,"Not applicable to you, or you have chosen to skip this broker."
+,,
+,PRIORITY TIERS,
+,Tier 1 – Crucial (16 brokers),"Highest visibility. These appear on page 1 of Google for name searches. Do these FIRST, manually, regardless of paid service coverage."
+,Tier 2 – High (19 brokers),"Major marketing, financial, and background check data brokers. Critical for reducing spam, insurance impacts, and employer background checks."
+,Tier 3 – Standard (58 brokers),"Remaining people search sites, specialty databases, and direct mail lists. Work through these after completing Tiers 1 and 2."
+,,
+,IMPORTANT NOTES,
+,Data reappears regularly,"Opt-out is NOT permanent. Most brokers re-add your data within 3–6 months from public records. This is an ongoing maintenance task, not a one-time project."
+,Use a secondary email,"When opt-outs require email confirmation, use a secondary or masked email (e.g., SimpleLogin, Apple Hide My Email). Some brokers use confirmation emails for future marketing."
+,Paid services are not complete,No single paid service covers all brokers. The best strategy is: 1 automated service + manual Tier 1 opt-outs + periodic manual sweeps of the full list.
+,Subsidiaries matter,"Many brokers own others. Opting out of Intelius, for example, covers ~20 subsidiary sites. Check the 'Also Covers' column in the Master Tracker."
+,Credit freeze is separate,"Freezing your credit (Equifax, Experian, TransUnion, Innovis, ChexSystems) is a separate action from data broker opt-outs. Both are necessary."
