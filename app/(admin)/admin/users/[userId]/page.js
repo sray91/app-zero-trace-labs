@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useParams } from 'next/navigation'
-import { useQuery, useMutation } from 'convex/react'
+import { useQuery, useMutation, useAction } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -35,7 +35,7 @@ import {
   DialogTitle,
   DialogTrigger
 } from '@/components/ui/dialog'
-import { Loader2, ExternalLink, Plus, Trash2, Pencil, Check } from 'lucide-react'
+import { Loader2, ExternalLink, Plus, Trash2, Pencil, Check, ScanSearch } from 'lucide-react'
 
 const STATUS_OPTIONS = [
   { value: 'not_started', label: 'Not Started' },
@@ -347,6 +347,49 @@ function ProfileEditDialog({ userId, user, profile }) {
   )
 }
 
+// Runs the Apify baseline scan for this user. Writes searchHistory +
+// brokerExposures, so the Search Log / Master Tracker tables update reactively.
+function BaselineScanButton({ userId }) {
+  const runScan = useAction(api.scanner.runBaselineScan)
+  const [running, setRunning] = useState(false)
+  const [result, setResult] = useState(null)
+  const [error, setError] = useState(null)
+
+  const run = async () => {
+    setRunning(true)
+    setError(null)
+    setResult(null)
+    try {
+      setResult(await runScan({ userId }))
+    } catch (e) {
+      setError(e.message?.replace(/^.*Error:\s*/, '') ?? 'Scan failed')
+    } finally {
+      setRunning(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <Button variant="outline" size="sm" onClick={run} disabled={running}>
+        {running ? (
+          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+        ) : (
+          <ScanSearch className="h-4 w-4 mr-1" />
+        )}
+        {running ? 'Scanning…' : 'Run baseline scan'}
+      </Button>
+      {result && (
+        <p className="text-xs text-muted-foreground text-right max-w-xs">
+          {result.found
+            ? `Found ${result.recordCount} record(s) across ${result.brokersUpdated} brokers — ${result.categories.join(', ')}`
+            : `No records found · ${result.brokersUpdated} brokers marked searched`}
+        </p>
+      )}
+      {error && <p className="text-xs text-destructive text-right max-w-xs">{error}</p>}
+    </div>
+  )
+}
+
 function TasksPanel({ userId, tasks }) {
   const createTask = useMutation(api.admin.createTask)
   const updateTask = useMutation(api.admin.updateTask)
@@ -597,7 +640,10 @@ export default function UserDetailPage() {
                 )}
                 {profile?.dateOfBirth && <div>DOB: {profile.dateOfBirth}</div>}
               </div>
-              <ProfileEditDialog userId={userId} user={user} profile={profile} />
+              <div className="flex flex-col items-end gap-2">
+                <ProfileEditDialog userId={userId} user={user} profile={profile} />
+                <BaselineScanButton userId={userId} />
+              </div>
             </div>
           </div>
         </CardContent>
