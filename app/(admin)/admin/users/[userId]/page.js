@@ -36,6 +36,16 @@ import {
   DialogTrigger
 } from '@/components/ui/dialog'
 import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogCancel
+} from '@/components/ui/alert-dialog'
+import { Switch } from '@/components/ui/switch'
+import {
   Loader2,
   ExternalLink,
   Plus,
@@ -45,7 +55,8 @@ import {
   Search,
   ScanSearch,
   AlertTriangle,
-  RotateCw
+  RotateCw,
+  ShieldCheck
 } from 'lucide-react'
 
 const STATUS_OPTIONS = [
@@ -757,6 +768,83 @@ function ProfileEditDialog({ userId, user, profile }) {
   )
 }
 
+// Promote/revoke admin for this user. Writes Clerk publicMetadata.role (source of
+// truth, via /api/admin/set-role) then mirrors it into Convex for instant feedback.
+function AdminRoleToggle({ userId, user, isSelf }) {
+  const setUserRole = useMutation(api.admin.setUserRole)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const isAdmin = user.role === 'admin'
+
+  const apply = async () => {
+    const nextRole = isAdmin ? null : 'admin'
+    setSaving(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/admin/set-role', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clerkId: user.clerkId, role: nextRole })
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to update role')
+      }
+      await setUserRole({ userId, role: nextRole })
+      setConfirmOpen(false)
+    } catch (e) {
+      setError(e.message?.replace(/^.*Error:\s*/, '') ?? 'Failed to update role')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <div className="flex items-center gap-2">
+        <ShieldCheck
+          className={`h-4 w-4 ${isAdmin ? 'text-warning-yellow' : 'text-muted-foreground'}`}
+        />
+        <span className="text-sm text-foreground">Admin access</span>
+        <Switch
+          checked={isAdmin}
+          disabled={saving || (isSelf && isAdmin)}
+          onCheckedChange={() => setConfirmOpen(true)}
+        />
+      </div>
+      {isSelf && isAdmin && (
+        <span className="text-[11px] text-muted-foreground">
+          You can&apos;t revoke your own access
+        </span>
+      )}
+      {error && <span className="max-w-xs text-right text-[11px] text-destructive">{error}</span>}
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {isAdmin ? 'Revoke admin access?' : 'Grant admin access?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {isAdmin
+                ? `${user.email} will lose access to the admin console and every client's records.`
+                : `${user.email} will be able to view and edit every client's records and grant admin access to others.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={saving}>Cancel</AlertDialogCancel>
+            <Button onClick={apply} disabled={saving}>
+              {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+              {isAdmin ? 'Revoke' : 'Grant admin'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  )
+}
+
 function BaselineScanButton({ userId }) {
   const runScan = useAction(api.scanner.runBaselineScan)
   const [running, setRunning] = useState(false)
@@ -816,6 +904,7 @@ function ProfileMeter({ profile }) {
 export default function UserDetailPage() {
   const { userId } = useParams()
   const detail = useQuery(api.admin.getUserDetail, { userId })
+  const me = useQuery(api.users.current)
   const setExposure = useMutation(api.admin.setExposure)
   const createTask = useMutation(api.admin.createTask)
   const updateTask = useMutation(api.admin.updateTask)
@@ -946,6 +1035,7 @@ export default function UserDetailPage() {
               <ProfileMeter profile={profile} />
             </div>
             <div className="flex flex-col items-end gap-2">
+              <AdminRoleToggle userId={userId} user={user} isSelf={me?._id === user._id} />
               <ProfileEditDialog userId={userId} user={user} profile={profile} />
               <BaselineScanButton userId={userId} />
             </div>
