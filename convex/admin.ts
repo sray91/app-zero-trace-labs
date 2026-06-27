@@ -220,6 +220,23 @@ export const updateUserProfile = mutation({
   },
 });
 
+// Promote a user to admin (or revoke it). Clerk's publicMetadata.role is the source
+// of truth and is updated separately via the /api/admin/set-role route; this mirrors
+// the change into Convex immediately so the console reflects it without waiting on the
+// Clerk webhook to re-sync. Admin only; an admin cannot revoke their own access (which
+// would otherwise lock them out of this console).
+export const setUserRole = mutation({
+  args: { userId: v.id("users"), role: v.union(v.literal("admin"), v.null()) },
+  handler: async (ctx, { userId, role }) => {
+    const admin = await requireAdmin(ctx);
+    if (admin._id === userId && role === null) {
+      throw new Error("You cannot revoke your own admin access");
+    }
+    await ctx.db.patch(userId, { role: role ?? undefined });
+    return userId;
+  },
+});
+
 // ---- Tasks ----
 
 export const createTask = mutation({

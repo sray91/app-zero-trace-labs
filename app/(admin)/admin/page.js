@@ -1,10 +1,12 @@
 'use client'
 
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
 import {
   Table,
@@ -21,7 +23,8 @@ import {
   Users as UsersIcon,
   CheckCircle2,
   Clock,
-  ListTodo
+  ListTodo,
+  Search
 } from 'lucide-react'
 
 function StatCard({ label, value, sub, icon: Icon }) {
@@ -45,6 +48,21 @@ function StatCard({ label, value, sub, icon: Icon }) {
 
 export default function AdminUsersPage() {
   const users = useQuery(api.admin.listUsers)
+  const [query, setQuery] = useState('')
+
+  // Fleet aggregates stay computed over every client; only the table is filtered.
+  const visibleUsers = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q || !users) return users ?? []
+    return users.filter((u) => {
+      const name = [u.firstName, u.lastName].filter(Boolean).join(' ')
+      return (
+        name.toLowerCase().includes(q) ||
+        (u.name ?? '').toLowerCase().includes(q) ||
+        (u.email ?? '').toLowerCase().includes(q)
+      )
+    })
+  }, [users, query])
 
   if (users === undefined) {
     return (
@@ -87,9 +105,20 @@ export default function AdminUsersPage() {
         <StatCard label="Open Tasks" value={totalOpenTasks} icon={ListTodo} />
       </div>
 
-      <h2 className="text-lg font-semibold font-outfit text-foreground mb-3">
-        All Clients ({totalUsers})
-      </h2>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold font-outfit text-foreground">
+          All Clients ({query.trim() ? `${visibleUsers.length} of ${totalUsers}` : totalUsers})
+        </h2>
+        <div className="relative w-full sm:w-72">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search clients by name or email…"
+            className="pl-8"
+          />
+        </div>
+      </div>
 
       <Card className="glass-card">
         <CardContent className="p-0">
@@ -105,7 +134,7 @@ export default function AdminUsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((u) => {
+              {visibleUsers.map((u) => {
                 const displayName =
                   [u.firstName, u.lastName].filter(Boolean).join(' ') || u.name || u.email || 'Unknown'
                 return (
@@ -136,10 +165,12 @@ export default function AdminUsersPage() {
                   </TableRow>
                 )
               })}
-              {totalUsers === 0 && (
+              {visibleUsers.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                    No users yet.
+                    {totalUsers === 0
+                      ? 'No users yet.'
+                      : `No clients match “${query.trim()}”.`}
                   </TableCell>
                 </TableRow>
               )}
