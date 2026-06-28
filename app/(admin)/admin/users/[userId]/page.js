@@ -1288,12 +1288,11 @@ export default function UserDetailPage() {
               </Table>
             </CardContent>
           </Card>
-
-          <InboxPanel userId={userId} brokerNames={brokerNames} />
         </div>
 
-        {/* Rail: action queue */}
-        <div className="lg:col-span-1">
+        {/* Rail: opt-out inbox + action queue */}
+        <div className="space-y-6 lg:col-span-1">
+          <InboxPanel userId={userId} brokerNames={brokerNames} />
           <ActionQueue
             userId={userId}
             counts={counts}
