@@ -241,11 +241,12 @@ export const ensureProxyEmail = mutation({
   },
 });
 
-// One-shot backfill for every user missing a proxy address. Admin-only.
-export const backfillProxyEmails = mutation({
+// One-shot backfill for every user missing a proxy address. Internal so it can be run
+// from the CLI without an authenticated admin:
+//   npx convex run users:backfillProxyEmails
+export const backfillProxyEmails = internalMutation({
   args: {},
   handler: async (ctx) => {
-    await requireAdmin(ctx);
     const users = await ctx.db.query("users").collect();
     let updated = 0;
     for (const u of users) {
