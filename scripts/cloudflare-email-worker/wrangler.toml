@@ -3,11 +3,15 @@ main = "worker.js"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
-# Public, non-secret. Point at your Convex deployment's .convex.site URL.
-#   dev:  https://secret-mink-940.convex.site/inbound-email
-#   prod: https://standing-swordfish-884.convex.site/inbound-email
+# Public, non-secret vars.
 [vars]
+# Prod Convex HTTP endpoint (.convex.site, not .convex.cloud).
 CONVEX_INBOUND_URL = "https://standing-swordfish-884.convex.site/inbound-email"
+# The alias subdomain. Must match PROXY_EMAIL_DOMAIN on Convex.
+PROXY_EMAIL_DOMAIN = "mail.0tracelabs.com"
+# Where real (non-alias) apex mail gets forwarded. MUST be a verified Email Routing
+# destination address (Email -> Email Routing -> Destination addresses).
+FALLBACK_EMAIL = "swanagan@ghostletter.us"
 
 # INBOUND_EMAIL_SECRET is a secret — do NOT put it here. Set it with:
 #   npx wrangler secret put INBOUND_EMAIL_SECRET
