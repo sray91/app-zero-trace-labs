@@ -1,0 +1,13 @@
+name = "zerotrace-inbound-email"
+main = "worker.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# Public, non-secret. Point at your Convex deployment's .convex.site URL.
+#   dev:  https://secret-mink-940.convex.site/inbound-email
+#   prod: https://standing-swordfish-884.convex.site/inbound-email
+[vars]
+CONVEX_INBOUND_URL = "https://standing-swordfish-884.convex.site/inbound-email"
+
+# INBOUND_EMAIL_SECRET is a secret — do NOT put it here. Set it with:
+#   npx wrangler secret put INBOUND_EMAIL_SECRET
