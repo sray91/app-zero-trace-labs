@@ -56,7 +56,11 @@ import {
   ScanSearch,
   AlertTriangle,
   RotateCw,
-  ShieldCheck
+  ShieldCheck,
+  Mail,
+  Copy,
+  Check,
+  Inbox
 } from 'lucide-react'
 
 const STATUS_OPTIONS = [
@@ -901,6 +905,176 @@ function ProfileMeter({ profile }) {
   )
 }
 
+// Proxy address the admin pastes into broker opt-out forms. Generated lazily for
+// users who pre-date the feature.
+function ProxyEmailRow({ userId, proxyEmail }) {
+  const ensure = useMutation(api.users.ensureProxyEmail)
+  const [copied, setCopied] = useState(false)
+  const [generating, setGenerating] = useState(false)
+
+  const copy = async () => {
+    if (!proxyEmail) return
+    await navigator.clipboard.writeText(proxyEmail)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
+  if (!proxyEmail) {
+    return (
+      <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+        <Mail className="h-3.5 w-3.5" />
+        <span>No opt-out email yet.</span>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-6"
+          disabled={generating}
+          onClick={async () => {
+            setGenerating(true)
+            try {
+              await ensure({ userId })
+            } finally {
+              setGenerating(false)
+            }
+          }}
+        >
+          {generating && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+          Generate
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-2 flex items-center gap-2">
+      <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+      <code className="rounded bg-muted/60 px-2 py-0.5 text-xs text-foreground">
+        {proxyEmail}
+      </code>
+      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={copy} title="Copy">
+        {copied ? (
+          <Check className="h-3.5 w-3.5 text-success-green" />
+        ) : (
+          <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+        )}
+      </Button>
+      <span className="text-[11px] text-muted-foreground">
+        use in broker opt-out forms
+      </span>
+    </div>
+  )
+}
+
+// Verification emails that arrived at the user's proxy address.
+function InboxPanel({ userId, brokerNames }) {
+  const messages = useQuery(api.inbox.listForUser, { userId })
+  const markRead = useMutation(api.inbox.markRead)
+
+  if (messages === undefined) {
+    return (
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle className="font-outfit text-lg">Opt-out inbox</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const unread = messages.filter((m) => !m.isRead).length
+
+  return (
+    <Card className="glass-card">
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="font-outfit text-lg">
+          Opt-out inbox
+          <span className="ml-2 text-sm font-normal text-muted-foreground">
+            {messages.length} message{messages.length === 1 ? '' : 's'}
+            {unread > 0 && <span className="text-nuclear-blue"> · {unread} unread</span>}
+          </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {messages.length === 0 && (
+          <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
+            <Inbox className="h-4 w-4" />
+            No verification emails yet. Paste the opt-out email into broker forms;
+            confirmations will appear here.
+          </div>
+        )}
+        {messages.map((m) => (
+          <div
+            key={m._id}
+            className={`rounded-lg border p-3 ${
+              m.isRead ? 'border-border' : 'border-nuclear-blue/50 bg-nuclear-blue/5'
+            }`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  {!m.isRead && <span className="h-2 w-2 shrink-0 rounded-full bg-nuclear-blue" />}
+                  <span className="truncate text-sm font-medium text-foreground">
+                    {m.subject || '(no subject)'}
+                  </span>
+                </div>
+                <div className="mt-0.5 text-xs text-muted-foreground">
+                  {m.fromAddress}
+                  {m.dataSourceId && brokerNames[m.dataSourceId] && (
+                    <Badge variant="outline" className="ml-2 text-[10px]">
+                      {brokerNames[m.dataSourceId]}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="whitespace-nowrap text-[11px] text-muted-foreground">
+                  {relTime(m.receivedAt)}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7"
+                  onClick={() => markRead({ messageId: m._id, isRead: !m.isRead })}
+                >
+                  {m.isRead ? 'Mark unread' : 'Mark read'}
+                </Button>
+              </div>
+            </div>
+
+            {m.text && (
+              <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-xs text-muted-foreground">
+                {m.text}
+              </p>
+            )}
+
+            {m.extractedLinks.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {m.extractedLinks.map((href, i) => (
+                  <Button
+                    key={href}
+                    variant={i === 0 ? 'default' : 'outline'}
+                    size="sm"
+                    className="h-7"
+                    asChild
+                    onClick={() => !m.isRead && markRead({ messageId: m._id, isRead: true })}
+                  >
+                    <a href={href} target="_blank" rel="noreferrer">
+                      {i === 0 ? 'Open verification link' : 'Link'}
+                      <ExternalLink className="ml-1 h-3 w-3" />
+                    </a>
+                  </Button>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function UserDetailPage() {
   const { userId } = useParams()
   const detail = useQuery(api.admin.getUserDetail, { userId })
@@ -1033,6 +1207,7 @@ export default function UserDetailPage() {
                 {profile?.phoneNumber && <span> · {profile.phoneNumber}</span>}
               </div>
               <ProfileMeter profile={profile} />
+              <ProxyEmailRow userId={userId} proxyEmail={user.proxyEmail} />
             </div>
             <div className="flex flex-col items-end gap-2">
               <AdminRoleToggle userId={userId} user={user} isSelf={me?._id === user._id} />
@@ -1113,6 +1288,8 @@ export default function UserDetailPage() {
               </Table>
             </CardContent>
           </Card>
+
+          <InboxPanel userId={userId} brokerNames={brokerNames} />
         </div>
 
         {/* Rail: action queue */}
