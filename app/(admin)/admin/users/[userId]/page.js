@@ -60,7 +60,9 @@ import {
   Mail,
   Copy,
   Check,
-  Inbox
+  Inbox,
+  ImageUp,
+  X
 } from 'lucide-react'
 
 const STATUS_OPTIONS = [
@@ -310,6 +312,82 @@ function AutoCheck({ checked, label, accent = 'accent-nuclear-blue', onCommit })
       />
       {label}
     </label>
+  )
+}
+
+// Upload + preview the screenshot evidence for a search. Posts the file to a
+// short-lived Convex upload URL, then saves the returned storageId on the
+// exposure (which also flips screenshotTaken on).
+function ScreenshotField({ url, onUpload, onClear }) {
+  const generateUploadUrl = useMutation(api.admin.generateUploadUrl)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState(null)
+
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = '' // allow re-selecting the same file
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      setError('Please choose an image file.')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    try {
+      const postUrl = await generateUploadUrl()
+      const res = await fetch(postUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': file.type },
+        body: file
+      })
+      if (!res.ok) throw new Error(`Upload failed (${res.status})`)
+      const { storageId } = await res.json()
+      await onUpload(storageId)
+    } catch (err) {
+      setError(err.message ?? 'Upload failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      {url ? (
+        <div className="relative inline-block">
+          <a href={url} target="_blank" rel="noopener noreferrer">
+            <img
+              src={url}
+              alt="Search screenshot"
+              className="max-h-40 rounded-md border border-border object-contain"
+            />
+          </a>
+          <button
+            type="button"
+            onClick={onClear}
+            className="absolute -right-2 -top-2 rounded-full border border-border bg-background p-1 text-muted-foreground hover:text-foreground"
+            title="Remove screenshot"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      ) : null}
+      <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted/40">
+        {busy ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <ImageUp className="h-4 w-4" />
+        )}
+        {busy ? 'Uploading…' : url ? 'Replace screenshot' : 'Upload screenshot'}
+        <input
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          disabled={busy}
+          onChange={handleFile}
+        />
+      </label>
+      {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
   )
 }
 
@@ -605,11 +683,17 @@ function BrokerRow({
                   onCommit={(v) => commit({ listingUrl: v })}
                 />
               </Field>
-              <AutoCheck
-                checked={exposure?.screenshotTaken}
-                label="Screenshot taken"
-                onCommit={(v) => commit({ screenshotTaken: v })}
-              />
+              <Field label="Screenshot taken">
+                <ScreenshotField
+                  url={exposure?.screenshotUrl}
+                  onUpload={(storageId) =>
+                    commit({ screenshotId: storageId, screenshotTaken: true })
+                  }
+                  onClear={() =>
+                    commit({ screenshotId: null, screenshotTaken: false })
+                  }
+                />
+              </Field>
             </Step>
 
             <Step

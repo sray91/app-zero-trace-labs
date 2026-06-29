@@ -114,6 +114,7 @@ export default defineSchema({
     searchTerm: v.optional(v.string()), // Search Term Used
     whatWasFound: v.optional(v.string()), // What Was Found
     screenshotTaken: v.optional(v.boolean()), // Screenshot Taken?
+    screenshotId: v.optional(v.id("_storage")), // uploaded screenshot evidence
     actionTaken: v.optional(v.string()), // Action Taken
     followUpNeeded: v.optional(v.boolean()), // Follow-Up Needed?
   })
