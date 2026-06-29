@@ -161,6 +161,24 @@ function stageReached(e) {
   return r
 }
 
+// The status key the UI should display, fusing raw removalStatus with search-log
+// signals — same rationale as stageReached(): Step 1 records a search by setting
+// exposureStatus/searchedAt/foundAt but leaves removalStatus 'not_started', so the
+// badge/stepper must derive from those too or they under-report (e.g. show
+// "Not started" for a broker that's already been searched and found).
+function effectiveStatus(e) {
+  const raw = e?.removalStatus ?? 'not_started'
+  let derived = 'not_started'
+  if (e?.exposureStatus === 'found' || e?.foundAt) derived = 'searched_found'
+  else if (e?.exposureStatus === 'not_found') derived = 'searched_not_found'
+  else if (e?.searchedAt) derived = 'searched_not_found'
+  // Whichever encodes more progress wins; ties keep raw so explicit later-stage
+  // statuses (submitted/removed/reappeared/handled_by_service/skipped) survive.
+  const rawReached = STATUS_META[raw]?.reached ?? 0
+  const derivedReached = STATUS_META[derived]?.reached ?? 0
+  return derivedReached > rawReached ? derived : raw
+}
+
 function patchForStatus(status, exposure) {
   const patch = { removalStatus: status }
   const now = Date.now()
@@ -411,7 +429,7 @@ function ScreenshotField({ url, onUpload, onClear }) {
 // ---- Pipeline stepper: Search · Find · Submit · Verify ----
 
 function StageStepper({ exposure }) {
-  const status = exposure?.removalStatus ?? 'not_started'
+  const status = effectiveStatus(exposure)
   const meta = STATUS_META[status] ?? STATUS_META.not_started
   const dot = TONE_DOT[meta.tone]
   return (
@@ -439,7 +457,7 @@ function StageStepper({ exposure }) {
 }
 
 function StatusPill({ exposure }) {
-  const status = exposure?.removalStatus ?? 'not_started'
+  const status = effectiveStatus(exposure)
   const meta = STATUS_META[status] ?? STATUS_META.not_started
   return (
     <span className={`inline-flex items-center gap-1 text-xs font-medium ${TONE_TEXT[meta.tone]}`}>
@@ -452,7 +470,7 @@ function StatusPill({ exposure }) {
 
 // Context-aware single action for the broker's current stage.
 function nextAction(broker, exposure) {
-  const status = exposure?.removalStatus ?? 'not_started'
+  const status = effectiveStatus(exposure)
   switch (status) {
     case 'not_started':
       return { label: 'Search', href: broker.searchUrl }
@@ -1531,7 +1549,7 @@ export default function UserDetailPage() {
       if (r >= 2) c.found++
       if (r >= 3) c.submitted++
       if (r >= 4) c.removed++
-      const s = exposure?.removalStatus ?? 'not_started'
+      const s = effectiveStatus(exposure)
       if (s === 'reappeared') c.reappeared++
       if (s === 'searched_found') c.foundUnsubmitted++
       if (isRecheckDue(exposure)) c.recheckDue++
@@ -1542,7 +1560,7 @@ export default function UserDetailPage() {
 
   const matchesFilter = (exposure) => {
     const r = stageReached(exposure)
-    const s = exposure?.removalStatus ?? 'not_started'
+    const s = effectiveStatus(exposure)
     switch (filter) {
       case 'all': return true
       case 'searched': return r >= 1
@@ -1571,7 +1589,7 @@ export default function UserDetailPage() {
       // needs-attention floats to the top, then tier, then name
       .sort((a, b) => {
         const att = (r) => {
-          const s = r.exposure?.removalStatus
+          const s = effectiveStatus(r.exposure)
           if (s === 'reappeared') return 0
           if (isRecheckDue(r.exposure)) return 1
           if (s === 'searched_found') return 2
