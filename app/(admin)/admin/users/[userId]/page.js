@@ -168,12 +168,17 @@ function stageReached(e) {
 // "Not started" for a broker that's already been searched and found).
 function effectiveStatus(e) {
   const raw = e?.removalStatus ?? 'not_started'
+  // Derive from *every* signal, mirroring stageReached(): each step (Search, Submit,
+  // Verify) stamps its own field but leaves removalStatus untouched, so reading any
+  // single field under-reports. Later stages override earlier ones.
   let derived = 'not_started'
   if (e?.exposureStatus === 'found' || e?.foundAt) derived = 'searched_found'
   else if (e?.exposureStatus === 'not_found') derived = 'searched_not_found'
   else if (e?.searchedAt) derived = 'searched_not_found'
-  // Whichever encodes more progress wins; ties keep raw so explicit later-stage
-  // statuses (submitted/removed/reappeared/handled_by_service/skipped) survive.
+  if (e?.submittedAt) derived = 'submitted'
+  if (e?.verifiedRemoved || e?.removedAt) derived = 'removed'
+  // Whichever encodes more progress wins; ties keep raw so explicit same-stage
+  // statuses (reappeared/handled_by_service/skipped) survive.
   const rawReached = STATUS_META[raw]?.reached ?? 0
   const derivedReached = STATUS_META[derived]?.reached ?? 0
   return derivedReached > rawReached ? derived : raw
@@ -547,6 +552,82 @@ function CopyField({ label, value }) {
   )
 }
 
+// Inline editor for a broker's search / opt-out URLs, surfaced in the per-user broker
+// panel so a wrong link can be fixed in place. Writes the shared catalog record via
+// dataSources.setUrls (admin-guarded), so the correction applies to every user.
+function BrokerUrlEditor({ broker }) {
+  const setUrls = useMutation(api.dataSources.setUrls)
+  const [open, setOpen] = useState(false)
+  const [searchUrl, setSearchUrl] = useState(broker.searchUrl ?? '')
+  const [optOutUrl, setOptOutUrl] = useState(broker.optOutUrl ?? '')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  // Re-sync when the underlying catalog record changes (e.g. another save lands).
+  useEffect(() => {
+    setSearchUrl(broker.searchUrl ?? '')
+    setOptOutUrl(broker.optOutUrl ?? '')
+  }, [broker.searchUrl, broker.optOutUrl])
+
+  const norm = (s) => (s.trim() === '' ? undefined : s.trim())
+  const dirty =
+    norm(searchUrl) !== (broker.searchUrl ?? undefined) ||
+    norm(optOutUrl) !== (broker.optOutUrl ?? undefined)
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      await setUrls({ id: broker._id, searchUrl: norm(searchUrl), optOutUrl: norm(optOutUrl) })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 1500)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 gap-1 px-2 text-xs text-muted-foreground"
+        onClick={() => setOpen((o) => !o)}
+      >
+        <Pencil className="h-3 w-3" /> Edit links
+      </Button>
+      {open && (
+        <div className="mt-2 space-y-2 rounded-md border border-border bg-muted/30 p-3">
+          <div className="space-y-1">
+            <Label htmlFor={`searchUrl-${broker._id}`} className="text-xs">Search URL</Label>
+            <Input
+              id={`searchUrl-${broker._id}`}
+              value={searchUrl}
+              onChange={(e) => setSearchUrl(e.target.value)}
+              placeholder="https://…"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor={`optOutUrl-${broker._id}`} className="text-xs">Opt-Out URL</Label>
+            <Input
+              id={`optOutUrl-${broker._id}`}
+              value={optOutUrl}
+              onChange={(e) => setOptOutUrl(e.target.value)}
+              placeholder="https://…"
+            />
+          </div>
+          <div className="flex items-center justify-end gap-2">
+            {saved && <span className="text-xs text-success-green">Saved</span>}
+            <Button size="sm" onClick={save} disabled={saving || !dirty}>
+              {saving && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}
+              Save
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ---- The unified broker row (collapsed spine + inline expanded record) ----
 
 function BrokerRow({
@@ -647,6 +728,8 @@ function BrokerRow({
               </PopupButton>
             )}
           </div>
+
+          <BrokerUrlEditor broker={broker} />
 
           {(broker.difficulty || broker.parentCompany || broker.alsoCovers) && (
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
