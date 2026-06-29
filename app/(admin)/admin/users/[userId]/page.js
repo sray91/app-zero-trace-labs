@@ -451,6 +451,12 @@ function BrokerRow({
   const commit = (patch) => setExposure({ userId, dataSourceId: broker._id, ...patch })
   const action = nextAction(broker, exposure)
   const activity = lastActivity(exposure)
+  // Step-completion flags drive the procedure timeline's checkmarks.
+  const searchDone = (exposure?.exposureStatus ?? 'unchecked') !== 'unchecked'
+  const submitDone =
+    !!exposure?.submittedAt ||
+    ['submitted', 'removed', 'handled_by_service'].includes(exposure?.removalStatus)
+  const verifyDone = !!exposure?.verifiedRemoved || exposure?.removalStatus === 'removed'
   const [open, setOpen] = useState(false)
   const [taskTitle, setTaskTitle] = useState('')
 
@@ -529,155 +535,170 @@ function BrokerRow({
             )}
           </div>
 
-          {(userEmail || proxyEmail) && (
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border bg-background/40 px-3 py-2">
-              <CopyField label="Email" value={userEmail} />
-              <CopyField label="Opt-out" value={proxyEmail} />
+          {(broker.difficulty || broker.parentCompany || broker.alsoCovers) && (
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              {broker.difficulty && (
+                <span>Difficulty <span className="text-foreground">{broker.difficulty}</span></span>
+              )}
+              {broker.parentCompany && (
+                <span>Parent <span className="text-foreground">{broker.parentCompany}</span></span>
+              )}
+              {broker.alsoCovers && (
+                <span>Also covers <span className="text-foreground">{broker.alsoCovers}</span></span>
+              )}
             </div>
           )}
 
-          {/* Playbook (read-only catalog) */}
-          <section className="space-y-2 rounded-lg border border-border bg-background/40 p-3">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Playbook
-            </h4>
-            <dl className="space-y-1 text-sm">
-              <RefRow k="Method" v={broker.optOutMethod} />
-              <RefRow k="Difficulty" v={broker.difficulty} />
-              <RefRow
-                k="Est. time"
-                v={broker.estProcessingDays ? `${broker.estProcessingDays} days` : undefined}
-              />
-              <RefRow k="Parent" v={broker.parentCompany} />
-              <RefRow k="Also covers" v={broker.alsoCovers} />
-            </dl>
-            {broker.instructions && (
-              <p className="rounded bg-muted/50 p-2 text-xs text-muted-foreground">
-                {broker.instructions}
-              </p>
-            )}
-            <div className="flex flex-wrap gap-2 pt-1">
+          {/* Guided removal procedure */}
+          <div className="pt-1">
+            <Step
+              n={1}
+              title="Search the site"
+              hint="Look the user up on the broker, then record what their listing exposes."
+              done={searchDone}
+            >
               {broker.searchUrl?.startsWith('http') && (
                 <PopupButton href={broker.searchUrl}>
-                  Search page <ExternalLink className="h-3 w-3 ml-1" />
+                  Open search page <ExternalLink className="h-3 w-3 ml-1" />
                 </PopupButton>
+              )}
+              <Field label="Search term used">
+                <AutoText
+                  value={exposure?.searchTerm}
+                  placeholder="e.g. Jane A Doe, Austin TX"
+                  onCommit={(v) => commit({ searchTerm: v })}
+                />
+              </Field>
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="Date searched">
+                  <AutoDate valueMs={exposure?.searchedAt} onCommit={(v) => commit({ searchedAt: v })} />
+                </Field>
+                <Field label="Data found?">
+                  <Select
+                    value={exposure?.exposureStatus ?? 'unchecked'}
+                    onValueChange={(v) => {
+                      const patch = { exposureStatus: v }
+                      if (v !== 'unchecked' && !exposure?.searchedAt) patch.searchedAt = Date.now()
+                      if (v === 'found') patch.foundAt = exposure?.foundAt ?? Date.now()
+                      commit(patch)
+                    }}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {FOUND_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </div>
+              <Field label="What was found">
+                <FoundDataChips
+                  value={exposure?.whatWasFound}
+                  onCommit={(v) => commit({ whatWasFound: v })}
+                />
+              </Field>
+              <Field label="Profile / listing URL">
+                <AutoText
+                  value={exposure?.listingUrl}
+                  placeholder="https://…"
+                  onCommit={(v) => commit({ listingUrl: v })}
+                />
+              </Field>
+              <AutoCheck
+                checked={exposure?.screenshotTaken}
+                label="Screenshot taken"
+                onCommit={(v) => commit({ screenshotTaken: v })}
+              />
+            </Step>
+
+            <Step
+              n={2}
+              title="Submit the opt-out"
+              hint={[broker.optOutMethod, broker.estProcessingDays && `est. ${broker.estProcessingDays} days`]
+                .filter(Boolean)
+                .join(' · ')}
+              done={submitDone}
+            >
+              {(userEmail || proxyEmail) && (
+                <div className="rounded-lg border border-border bg-muted/30 p-2">
+                  <p className="mb-1 text-xs text-muted-foreground">Use this email when the form asks:</p>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                    <CopyField label="Email" value={userEmail} />
+                    <CopyField label="Opt-out" value={proxyEmail} />
+                  </div>
+                </div>
+              )}
+              {broker.instructions && (
+                <p className="rounded-md border-l-2 border-warning-yellow/60 bg-warning-yellow/5 p-2 text-xs text-muted-foreground">
+                  {broker.instructions}
+                </p>
               )}
               {broker.optOutUrl?.startsWith('http') && (
                 <PopupButton href={broker.optOutUrl}>
-                  Opt-out page <ExternalLink className="h-3 w-3 ml-1" />
+                  Open opt-out page <ExternalLink className="h-3 w-3 ml-1" />
                 </PopupButton>
               )}
-            </div>
-          </section>
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="Submitted">
+                  <AutoDate valueMs={exposure?.submittedAt} onCommit={(v) => commit({ submittedAt: v })} />
+                </Field>
+                <Field label="Confirmation # / ref">
+                  <AutoText
+                    value={exposure?.confirmationRef}
+                    onCommit={(v) => commit({ confirmationRef: v })}
+                  />
+                </Field>
+              </div>
+            </Step>
 
-          {/* Search log (editable) */}
-          <section className="space-y-3 rounded-lg border border-border bg-background/40 p-3">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Search log
-            </h4>
-            <div className="grid grid-cols-2 gap-2">
-              <Field label="Date searched">
-                <AutoDate valueMs={exposure?.searchedAt} onCommit={(v) => commit({ searchedAt: v })} />
-              </Field>
-              <Field label="Data found?">
+            <Step
+              n={3}
+              title="Confirm removal"
+              hint="Verify the listing is gone, then set a re-check date."
+              done={verifyDone}
+              last
+            >
+              <Field label="Status">
                 <Select
-                  value={exposure?.exposureStatus ?? 'unchecked'}
-                  onValueChange={(v) => {
-                    const patch = { exposureStatus: v }
-                    if (v !== 'unchecked' && !exposure?.searchedAt) patch.searchedAt = Date.now()
-                    if (v === 'found') patch.foundAt = exposure?.foundAt ?? Date.now()
-                    commit(patch)
-                  }}
+                  value={exposure?.removalStatus ?? 'not_started'}
+                  onValueChange={(v) => commit(patchForStatus(v, exposure))}
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {FOUND_OPTIONS.map((o) => (
+                    {STATUS_OPTIONS.map((o) => (
                       <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </Field>
-            </div>
-            <Field label="Search term used">
-              <AutoText
-                value={exposure?.searchTerm}
-                placeholder="e.g. Jane A Doe, Austin TX"
-                onCommit={(v) => commit({ searchTerm: v })}
-              />
-            </Field>
-            <Field label="What was found">
-              <FoundDataChips
-                value={exposure?.whatWasFound}
-                onCommit={(v) => commit({ whatWasFound: v })}
-              />
-            </Field>
-            <Field label="Profile / listing URL">
-              <AutoText
-                value={exposure?.listingUrl}
-                placeholder="https://…"
-                onCommit={(v) => commit({ listingUrl: v })}
-              />
-            </Field>
-            <AutoCheck
-              checked={exposure?.screenshotTaken}
-              label="Screenshot taken"
-              onCommit={(v) => commit({ screenshotTaken: v })}
-            />
-          </section>
-
-          {/* Remediation (editable) */}
-          <section className="space-y-3 rounded-lg border border-border bg-background/40 p-3">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Remediation
-            </h4>
-            <Field label="Status">
-              <Select
-                value={exposure?.removalStatus ?? 'not_started'}
-                onValueChange={(v) => commit(patchForStatus(v, exposure))}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {STATUS_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="Confirmation # / ref">
-              <AutoText
-                value={exposure?.confirmationRef}
-                onCommit={(v) => commit({ confirmationRef: v })}
-              />
-            </Field>
-            <div className="grid grid-cols-3 gap-2">
-              <Field label="Submitted">
-                <AutoDate valueMs={exposure?.submittedAt} onCommit={(v) => commit({ submittedAt: v })} />
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="Verified">
+                  <AutoDate valueMs={exposure?.removedAt} onCommit={(v) => commit({ removedAt: v })} />
+                </Field>
+                <Field label="Re-check">
+                  <AutoDate valueMs={exposure?.recheckAt} onCommit={(v) => commit({ recheckAt: v })} />
+                </Field>
+              </div>
+              <div className="flex flex-wrap gap-4">
+                <AutoCheck
+                  checked={exposure?.verifiedRemoved}
+                  label="Verified removed"
+                  accent="accent-success-green"
+                  onCommit={(v) => commit({ verifiedRemoved: v })}
+                />
+                <AutoCheck
+                  checked={exposure?.followUpNeeded}
+                  label="Follow-up needed"
+                  accent="accent-warning-yellow"
+                  onCommit={(v) => commit({ followUpNeeded: v })}
+                />
+              </div>
+              <Field label="Notes">
+                <AutoArea value={exposure?.notes} rows={3} onCommit={(v) => commit({ notes: v })} />
               </Field>
-              <Field label="Verified">
-                <AutoDate valueMs={exposure?.removedAt} onCommit={(v) => commit({ removedAt: v })} />
-              </Field>
-              <Field label="Re-check">
-                <AutoDate valueMs={exposure?.recheckAt} onCommit={(v) => commit({ recheckAt: v })} />
-              </Field>
-            </div>
-            <div className="flex flex-wrap gap-4">
-              <AutoCheck
-                checked={exposure?.verifiedRemoved}
-                label="Verified removed"
-                accent="accent-success-green"
-                onCommit={(v) => commit({ verifiedRemoved: v })}
-              />
-              <AutoCheck
-                checked={exposure?.followUpNeeded}
-                label="Follow-up needed"
-                accent="accent-warning-yellow"
-                onCommit={(v) => commit({ followUpNeeded: v })}
-              />
-            </div>
-            <Field label="Notes">
-              <AutoArea value={exposure?.notes} rows={3} onCommit={(v) => commit({ notes: v })} />
-            </Field>
-          </section>
+            </Step>
+          </div>
 
           {/* Broker-scoped tasks */}
           <section className="space-y-2 rounded-lg border border-border bg-background/40 p-3">
@@ -728,12 +749,30 @@ function BrokerRow({
   )
 }
 
-function RefRow({ k, v }) {
-  if (!v) return null
+// One node in the guided removal procedure: numbered badge + connecting timeline
+// line, a title/hint, and the editable fields for that step.
+function Step({ n, title, hint, done, last, children }) {
   return (
-    <div className="flex justify-between gap-2">
-      <dt className="text-muted-foreground">{k}</dt>
-      <dd className="text-right text-foreground">{v}</dd>
+    <div className="flex gap-3">
+      <div className="flex flex-col items-center">
+        <div
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold transition-colors ${
+            done
+              ? 'border-success-green bg-success-green/15 text-success-green'
+              : 'border-nuclear-blue/60 bg-nuclear-blue/10 text-nuclear-blue'
+          }`}
+        >
+          {done ? <Check className="h-4 w-4" /> : n}
+        </div>
+        {!last && <div className="mt-1 w-px flex-1 bg-border" />}
+      </div>
+      <div className="flex-1 space-y-3 pb-6">
+        <div>
+          <h4 className="font-outfit text-sm font-semibold text-foreground">{title}</h4>
+          {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+        </div>
+        {children}
+      </div>
     </div>
   )
 }
