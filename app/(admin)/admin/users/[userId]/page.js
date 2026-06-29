@@ -965,10 +965,12 @@ function ProxyEmailRow({ userId, proxyEmail }) {
   )
 }
 
-// Verification emails that arrived at the user's proxy address.
+// Verification emails that arrived at the user's proxy address. Each message is a
+// compact row; clicking opens a popup with the full message, sender, and recipient.
 function InboxPanel({ userId, brokerNames }) {
   const messages = useQuery(api.inbox.listForUser, { userId })
   const markRead = useMutation(api.inbox.markRead)
+  const [openId, setOpenId] = useState(null)
 
   if (messages === undefined) {
     return (
@@ -984,6 +986,7 @@ function InboxPanel({ userId, brokerNames }) {
   }
 
   const unread = messages.filter((m) => !m.isRead).length
+  const active = messages.find((m) => m._id === openId) || null
 
   return (
     <Card className="glass-card">
@@ -996,7 +999,7 @@ function InboxPanel({ userId, brokerNames }) {
           </span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-2">
         {messages.length === 0 && (
           <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
             <Inbox className="h-4 w-4" />
@@ -1005,72 +1008,105 @@ function InboxPanel({ userId, brokerNames }) {
           </div>
         )}
         {messages.map((m) => (
-          <div
+          <button
             key={m._id}
-            className={`rounded-lg border p-3 ${
+            type="button"
+            onClick={() => {
+              setOpenId(m._id)
+              if (!m.isRead) markRead({ messageId: m._id, isRead: true })
+            }}
+            className={`w-full rounded-lg border p-3 text-left transition-colors hover:bg-muted/50 ${
               m.isRead ? 'border-border' : 'border-nuclear-blue/50 bg-nuclear-blue/5'
             }`}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  {!m.isRead && <span className="h-2 w-2 shrink-0 rounded-full bg-nuclear-blue" />}
-                  <span className="truncate text-sm font-medium text-foreground">
-                    {m.subject || '(no subject)'}
-                  </span>
-                </div>
-                <div className="mt-0.5 text-xs text-muted-foreground">
-                  {m.fromAddress}
-                  {m.dataSourceId && brokerNames[m.dataSourceId] && (
-                    <Badge variant="outline" className="ml-2 text-[10px]">
-                      {brokerNames[m.dataSourceId]}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <span className="whitespace-nowrap text-[11px] text-muted-foreground">
-                  {relTime(m.receivedAt)}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                {!m.isRead && <span className="h-2 w-2 shrink-0 rounded-full bg-nuclear-blue" />}
+                <span className="truncate text-sm font-medium text-foreground">
+                  {m.subject || '(no subject)'}
                 </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7"
-                  onClick={() => markRead({ messageId: m._id, isRead: !m.isRead })}
-                >
-                  {m.isRead ? 'Mark unread' : 'Mark read'}
-                </Button>
               </div>
+              <span className="whitespace-nowrap text-[11px] text-muted-foreground">
+                {relTime(m.receivedAt)}
+              </span>
             </div>
-
-            {m.text && (
-              <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-xs text-muted-foreground">
-                {m.text}
-              </p>
-            )}
-
-            {m.extractedLinks.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {m.extractedLinks.map((href, i) => (
-                  <Button
-                    key={href}
-                    variant={i === 0 ? 'default' : 'outline'}
-                    size="sm"
-                    className="h-7"
-                    asChild
-                    onClick={() => !m.isRead && markRead({ messageId: m._id, isRead: true })}
-                  >
-                    <a href={href} target="_blank" rel="noreferrer">
-                      {i === 0 ? 'Open verification link' : 'Link'}
-                      <ExternalLink className="ml-1 h-3 w-3" />
-                    </a>
-                  </Button>
-                ))}
-              </div>
-            )}
-          </div>
+            <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="truncate">{m.fromAddress}</span>
+              {m.dataSourceId && brokerNames[m.dataSourceId] && (
+                <Badge variant="outline" className="shrink-0 text-[10px]">
+                  {brokerNames[m.dataSourceId]}
+                </Badge>
+              )}
+            </div>
+          </button>
         ))}
       </CardContent>
+
+      <Dialog open={!!active} onOpenChange={(o) => !o && setOpenId(null)}>
+        <DialogContent className="max-w-2xl">
+          {active && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="font-outfit">
+                  {active.subject || '(no subject)'}
+                </DialogTitle>
+                <DialogDescription className="space-y-0.5 pt-1">
+                  <span className="block">
+                    <span className="text-muted-foreground">From: </span>
+                    <span className="text-foreground">{active.fromAddress}</span>
+                  </span>
+                  <span className="block">
+                    <span className="text-muted-foreground">To: </span>
+                    <span className="text-foreground">{active.proxyEmail}</span>
+                  </span>
+                  <span className="block text-[11px]">
+                    {new Date(active.receivedAt).toLocaleString()}
+                    {active.dataSourceId && brokerNames[active.dataSourceId] && (
+                      <Badge variant="outline" className="ml-2 text-[10px]">
+                        {brokerNames[active.dataSourceId]}
+                      </Badge>
+                    )}
+                  </span>
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="max-h-[50vh] overflow-y-auto rounded-lg border bg-muted/30 p-4">
+                {active.text ? (
+                  <p className="whitespace-pre-wrap break-words text-sm text-foreground">
+                    {active.text}
+                  </p>
+                ) : active.html ? (
+                  <div
+                    className="prose prose-sm prose-invert max-w-none break-words"
+                    dangerouslySetInnerHTML={{ __html: active.html }}
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground">(empty message)</p>
+                )}
+              </div>
+
+              {active.extractedLinks.length > 0 && (
+                <DialogFooter className="flex-wrap gap-2 sm:justify-start">
+                  {active.extractedLinks.map((href, i) => (
+                    <Button
+                      key={href}
+                      variant={i === 0 ? 'default' : 'outline'}
+                      size="sm"
+                      className="h-8"
+                      asChild
+                    >
+                      <a href={href} target="_blank" rel="noreferrer">
+                        {i === 0 ? 'Open verification link' : 'Link'}
+                        <ExternalLink className="ml-1 h-3 w-3" />
+                      </a>
+                    </Button>
+                  ))}
+                </DialogFooter>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }
