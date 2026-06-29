@@ -277,6 +277,65 @@ function nextAction(broker, exposure) {
   }
 }
 
+// Opens a URL in a single reusable popup window layered over the app, so the admin
+// can work a broker form without leaving the user page. Reusing the window name keeps
+// it to one window; falls back to a new tab if the browser blocks the popup.
+function openBrokerWindow(href) {
+  if (!href) return
+  const w = 1100
+  const h = 800
+  const left = window.screenX + Math.max(0, (window.outerWidth - w) / 2)
+  const top = window.screenY + Math.max(0, (window.outerHeight - h) / 2)
+  const features = `popup=yes,width=${w},height=${h},left=${Math.round(left)},top=${Math.round(top)}`
+  const win = window.open(href, 'zt-broker-window', features)
+  if (win) win.focus()
+  else window.open(href, '_blank', 'noopener,noreferrer') // popup blocked → new tab
+}
+
+// Button that opens its href in the shared broker popup window instead of navigating.
+function PopupButton({ href, children, variant = 'outline', size = 'sm', className }) {
+  return (
+    <Button
+      variant={variant}
+      size={size}
+      className={className}
+      onClick={(e) => {
+        e.stopPropagation()
+        openBrokerWindow(href)
+      }}
+    >
+      {children}
+    </Button>
+  )
+}
+
+// Inline copyable value: monospace chip + one-click copy. Used in the broker
+// dialog so the admin can grab the user's email / opt-out alias while filling forms.
+function CopyField({ label, value }) {
+  const [copied, setCopied] = useState(false)
+  if (!value) return null
+  const copy = async () => {
+    await navigator.clipboard.writeText(value)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <code className="truncate rounded bg-muted/60 px-2 py-0.5 text-xs text-foreground">
+        {value}
+      </code>
+      <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={copy} title="Copy">
+        {copied ? (
+          <Check className="h-3.5 w-3.5 text-success-green" />
+        ) : (
+          <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+        )}
+      </Button>
+    </div>
+  )
+}
+
 // ---- The unified broker row (collapsed spine + inline expanded record) ----
 
 function BrokerRow({
@@ -284,6 +343,8 @@ function BrokerRow({
   exposure,
   tasks,
   userId,
+  userEmail,
+  proxyEmail,
   setExposure,
   createTask,
   updateTask,
@@ -335,11 +396,9 @@ function BrokerRow({
         </TableCell>
         <TableCell onClick={(e) => e.stopPropagation()}>
           {action?.href && action.href.startsWith('http') ? (
-            <Button variant="outline" size="sm" asChild>
-              <a href={action.href} target="_blank" rel="noreferrer">
-                {action.label} <ExternalLink className="h-3 w-3 ml-1" />
-              </a>
-            </Button>
+            <PopupButton href={action.href}>
+              {action.label} <ExternalLink className="h-3 w-3 ml-1" />
+            </PopupButton>
           ) : action ? (
             <span className="text-xs text-muted-foreground">{action.label}</span>
           ) : null}
@@ -366,13 +425,18 @@ function BrokerRow({
           <div className="flex items-center justify-between gap-2">
             <StatusPill exposure={exposure} />
             {action?.href?.startsWith('http') && (
-              <Button variant="outline" size="sm" asChild>
-                <a href={action.href} target="_blank" rel="noreferrer">
-                  {action.label} <ExternalLink className="h-3 w-3 ml-1" />
-                </a>
-              </Button>
+              <PopupButton href={action.href}>
+                {action.label} <ExternalLink className="h-3 w-3 ml-1" />
+              </PopupButton>
             )}
           </div>
+
+          {(userEmail || proxyEmail) && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border bg-background/40 px-3 py-2">
+              <CopyField label="Email" value={userEmail} />
+              <CopyField label="Opt-out" value={proxyEmail} />
+            </div>
+          )}
 
           {/* Playbook (read-only catalog) */}
           <section className="space-y-2 rounded-lg border border-border bg-background/40 p-3">
@@ -396,18 +460,14 @@ function BrokerRow({
             )}
             <div className="flex flex-wrap gap-2 pt-1">
               {broker.searchUrl?.startsWith('http') && (
-                <Button variant="outline" size="sm" asChild>
-                  <a href={broker.searchUrl} target="_blank" rel="noreferrer">
-                    Search page <ExternalLink className="h-3 w-3 ml-1" />
-                  </a>
-                </Button>
+                <PopupButton href={broker.searchUrl}>
+                  Search page <ExternalLink className="h-3 w-3 ml-1" />
+                </PopupButton>
               )}
               {broker.optOutUrl?.startsWith('http') && (
-                <Button variant="outline" size="sm" asChild>
-                  <a href={broker.optOutUrl} target="_blank" rel="noreferrer">
-                    Opt-out page <ExternalLink className="h-3 w-3 ml-1" />
-                  </a>
-                </Button>
+                <PopupButton href={broker.optOutUrl}>
+                  Opt-out page <ExternalLink className="h-3 w-3 ml-1" />
+                </PopupButton>
               )}
             </div>
           </section>
@@ -1088,18 +1148,15 @@ function InboxPanel({ userId, brokerNames }) {
               {active.extractedLinks.length > 0 && (
                 <DialogFooter className="flex-wrap gap-2 sm:justify-start">
                   {active.extractedLinks.map((href, i) => (
-                    <Button
+                    <PopupButton
                       key={href}
+                      href={href}
                       variant={i === 0 ? 'default' : 'outline'}
-                      size="sm"
                       className="h-8"
-                      asChild
                     >
-                      <a href={href} target="_blank" rel="noreferrer">
-                        {i === 0 ? 'Open verification link' : 'Link'}
-                        <ExternalLink className="ml-1 h-3 w-3" />
-                      </a>
-                    </Button>
+                      {i === 0 ? 'Open verification link' : 'Link'}
+                      <ExternalLink className="ml-1 h-3 w-3" />
+                    </PopupButton>
                   ))}
                 </DialogFooter>
               )}
@@ -1307,6 +1364,8 @@ export default function UserDetailPage() {
                       exposure={exposure}
                       tasks={tasksByBroker[broker._id] ?? []}
                       userId={userId}
+                      userEmail={user.email}
+                      proxyEmail={user.proxyEmail}
                       setExposure={setExposure}
                       createTask={createTask}
                       updateTask={updateTask}
