@@ -2,10 +2,10 @@
 
 import { useQuery } from 'convex/react'
 import { format } from 'date-fns'
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 import { api } from '@/convex/_generated/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
 import {
   Table,
   TableBody,
@@ -32,6 +32,9 @@ const STATUS_LABEL = {
   handled_by_service: 'Handled by Service',
   skipped: 'Skipped'
 }
+
+// Brand hex values (recharts fills can't read Tailwind classes / CSS vars reliably).
+const C = { blue: '#0044FF', yellow: '#FFD60A', green: '#00FF88', gray: '#A3B0C2' }
 
 function statusVariant(status) {
   if (status === 'removed' || status === 'handled_by_service') return 'default'
@@ -65,6 +68,101 @@ function StatCard({ label, value, sub, accent, icon: Icon }) {
   )
 }
 
+// The five cumulative funnel stages, painted as proportional bars.
+const FUNNEL_STAGES = [
+  { key: 'total', label: 'Total brokers', bar: 'bg-muted-foreground/40', text: 'text-foreground' },
+  { key: 'searched', label: 'Searched', bar: 'bg-nuclear-blue', text: 'text-nuclear-blue' },
+  { key: 'found', label: 'Found exposed', bar: 'bg-warning-yellow', text: 'text-warning-yellow' },
+  { key: 'submitted', label: 'Opt-out submitted', bar: 'bg-nuclear-blue', text: 'text-nuclear-blue' },
+  { key: 'removed', label: 'Verified removed', bar: 'bg-success-green', text: 'text-success-green' }
+]
+
+// Mutually-exclusive slices carved from the cumulative funnel so every broker lands
+// in exactly one bucket and the slices sum to the total.
+function donutSlices(funnel) {
+  return [
+    { name: 'Verified removed', value: funnel.removed, fill: C.green },
+    { name: 'Submitted · awaiting', value: funnel.submitted - funnel.removed, fill: C.blue },
+    { name: 'Found · needs opt-out', value: funnel.found - funnel.submitted, fill: C.yellow },
+    { name: 'Searched · clean', value: funnel.searched - funnel.found, fill: C.gray },
+    { name: 'Not started', value: funnel.total - funnel.searched, fill: 'rgba(163,176,194,0.18)' }
+  ].filter((s) => s.value > 0)
+}
+
+function FunnelDonut({ funnel }) {
+  const slices = donutSlices(funnel)
+  const pct = funnel.total ? Math.round((funnel.removed / funnel.total) * 100) : 0
+  return (
+    <div className="relative h-48 w-48 shrink-0">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={slices}
+            dataKey="value"
+            nameKey="name"
+            innerRadius={62}
+            outerRadius={90}
+            startAngle={90}
+            endAngle={-270}
+            paddingAngle={slices.length > 1 ? 2 : 0}
+            stroke="none"
+            isAnimationActive={false}
+          >
+            {slices.map((s) => (
+              <Cell key={s.name} fill={s.fill} />
+            ))}
+          </Pie>
+        </PieChart>
+      </ResponsiveContainer>
+      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+        <span className="font-outfit text-3xl font-bold text-success-green leading-none">{pct}%</span>
+        <span className="text-xs text-muted-foreground mt-1">removed</span>
+      </div>
+    </div>
+  )
+}
+
+function RemovalFunnel({ funnel }) {
+  const total = funnel.total || 1
+  return (
+    <div className="flex flex-col items-center gap-8 sm:flex-row">
+      <FunnelDonut funnel={funnel} />
+      <div className="w-full flex-1 space-y-2">
+        {FUNNEL_STAGES.map((s, i) => {
+          const n = funnel[s.key]
+          const pct = Math.round((n / total) * 100)
+          const prevN = i === 0 ? n : funnel[FUNNEL_STAGES[i - 1].key]
+          const conv = i === 0 ? null : prevN === 0 ? 0 : Math.round((n / prevN) * 100)
+          return (
+            <div key={s.key}>
+              <div className="mb-1 flex items-baseline justify-between gap-2">
+                <span className="flex items-baseline gap-2 text-sm font-medium text-foreground">
+                  {s.label}
+                  {conv !== null && (
+                    <span className="text-[11px] font-normal text-muted-foreground">
+                      {conv}% of previous
+                    </span>
+                  )}
+                </span>
+                <span className={`text-sm font-semibold ${s.text}`}>
+                  {n}
+                  <span className="ml-1 text-[11px] font-normal text-muted-foreground">{pct}%</span>
+                </span>
+              </div>
+              <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted/40">
+                <div
+                  className={`h-full rounded-full ${s.bar} transition-all`}
+                  style={{ width: `${n > 0 ? Math.max(pct, 2) : 0}%` }}
+                />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function DashboardPage() {
   const data = useQuery(api.dashboard.forCurrentUser)
 
@@ -76,7 +174,7 @@ export default function DashboardPage() {
     )
   }
 
-  const { total, tierCounts, summary, completion, byTier, byCategory, tier1, lastUpdated } = data
+  const { total, tierCounts, funnel, summary, byTier, byCategory, tier1, lastUpdated } = data
 
   return (
     <div className="min-h-screen bg-background">
@@ -94,43 +192,23 @@ export default function DashboardPage() {
           </p>
         </div>
 
+        {/* Removal funnel — the visual centerpiece */}
+        <Card className="glass-card border-nuclear-blue/20 mb-8">
+          <CardHeader>
+            <CardTitle className="font-outfit text-lg">Removal Funnel</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RemovalFunnel funnel={funnel} />
+          </CardContent>
+        </Card>
+
         {/* Summary stat cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <StatCard label="Total Brokers" value={total} sub="In your tracker" accent="nuclear-blue" icon={ShieldCheck} />
-          <StatCard label="Not Started" value={summary.notStarted} sub="Pending action" accent="muted-gray" icon={CircleDashed} />
-          <StatCard label="Opt-Outs Submitted" value={summary.submitted} sub="Awaiting confirmation" accent="warning-yellow" icon={Clock} />
+          <StatCard label="Not Started" value={summary.notStarted} sub="Pending search" accent="muted-gray" icon={CircleDashed} />
+          <StatCard label="Opt-Outs Submitted" value={summary.submittedAwaiting} sub="Awaiting confirmation" accent="warning-yellow" icon={Clock} />
           <StatCard label="Confirmed Removed" value={summary.removed} sub="Verified clean" accent="success-green" icon={CheckCircle2} />
         </div>
-
-        {/* Overall completion */}
-        <Card className="glass-card border-nuclear-blue/20 mb-8">
-          <CardHeader>
-            <CardTitle className="font-outfit text-lg">Overall Completion Rate</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-muted-foreground">Confirmed removed</span>
-                <span className="font-medium text-success-green">{completion.removedPct}%</span>
-              </div>
-              <Progress value={completion.removedPct} className="h-2" />
-            </div>
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-muted-foreground">Opt-outs submitted</span>
-                <span className="font-medium text-warning-yellow">{completion.submittedPct}%</span>
-              </div>
-              <Progress value={completion.submittedPct} className="h-2" />
-            </div>
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-muted-foreground">Not yet started</span>
-                <span className="font-medium text-muted-foreground">{completion.notStartedPct}%</span>
-              </div>
-              <Progress value={completion.notStartedPct} className="h-2" />
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Tier counts */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
@@ -147,7 +225,7 @@ export default function DashboardPage() {
         {/* Status breakdown by tier */}
         <Card className="glass-card mb-8">
           <CardHeader>
-            <CardTitle className="font-outfit text-lg">Status Breakdown by Tier</CardTitle>
+            <CardTitle className="font-outfit text-lg">Progress by Tier</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
@@ -156,10 +234,10 @@ export default function DashboardPage() {
                   <TableHead>Tier</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead className="text-right">Not Started</TableHead>
-                  <TableHead className="text-right">Searched – Found</TableHead>
+                  <TableHead className="text-right">Searched</TableHead>
+                  <TableHead className="text-right">Found</TableHead>
                   <TableHead className="text-right">Submitted</TableHead>
                   <TableHead className="text-right">Removed</TableHead>
-                  <TableHead className="text-right">Handled by Service</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -168,10 +246,10 @@ export default function DashboardPage() {
                     <TableCell className="font-medium">{TIER_LABEL[row.tier]}</TableCell>
                     <TableCell className="text-right">{row.total}</TableCell>
                     <TableCell className="text-right">{row.notStarted}</TableCell>
-                    <TableCell className="text-right">{row.searchedFound}</TableCell>
+                    <TableCell className="text-right">{row.searched}</TableCell>
+                    <TableCell className="text-right">{row.found}</TableCell>
                     <TableCell className="text-right">{row.submitted}</TableCell>
                     <TableCell className="text-right text-success-green">{row.removed}</TableCell>
-                    <TableCell className="text-right">{row.handledByService}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
