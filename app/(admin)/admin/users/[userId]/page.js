@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useParams } from 'next/navigation'
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 import { useQuery, useMutation, useAction } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -143,6 +144,22 @@ const lastActivity = (e) =>
 
 const isRecheckDue = (e) =>
   !!e?.recheckAt && e.recheckAt <= Date.now() + 7 * DAY
+
+// Where a broker sits in the Search → Find → Submit → Verify funnel, as a 0–4 stage.
+// Derived from *every* signal (raw search activity + removalStatus), not removalStatus
+// alone — recording a search in Step 1 sets searchedAt/exposureStatus but leaves
+// removalStatus 'not_started', so a status-only reading under-counts "Searched".
+// Because each higher stage implies the ones below it, the funnel is always monotonic
+// (a Verified broker is still counted as Searched/Found/Submitted).
+function stageReached(e) {
+  if (!e) return 0
+  let r = STATUS_META[e.removalStatus ?? 'not_started']?.reached ?? 0
+  if (e.verifiedRemoved || e.removedAt) r = Math.max(r, 4)
+  if (e.submittedAt) r = Math.max(r, 3)
+  if (e.exposureStatus === 'found' || e.foundAt) r = Math.max(r, 2)
+  if (e.searchedAt || (e.exposureStatus && e.exposureStatus !== 'unchecked')) r = Math.max(r, 1)
+  return r
+}
 
 function patchForStatus(status, exposure) {
   const patch = { removalStatus: status }
@@ -870,32 +887,122 @@ function Field({ label, children }) {
   )
 }
 
-// ---- Pipeline funnel: counts that double as filters ----
+// ---- Pipeline funnel: a visual Search → Verify funnel that doubles as filters ----
+
+// Brand hex values (recharts fills can't read Tailwind classes / CSS vars reliably).
+const C = {
+  blue: '#0044FF',
+  yellow: '#FFD60A',
+  green: '#00FF88',
+  gray: '#A3B0C2'
+}
+
+// The five cumulative funnel stages. `bar`/`hex` paint the proportional bar; clicking
+// a stage filters the tracker to it (clicking the active stage clears back to Total).
+const FUNNEL_STAGES = [
+  { key: 'all', label: 'Total', bar: 'bg-muted-foreground/40', text: 'text-foreground', hex: C.gray },
+  { key: 'searched', label: 'Searched', bar: 'bg-nuclear-blue', text: 'text-nuclear-blue', hex: C.blue },
+  { key: 'found', label: 'Found', bar: 'bg-warning-yellow', text: 'text-warning-yellow', hex: C.yellow },
+  { key: 'submitted', label: 'Opt-out submitted', bar: 'bg-nuclear-blue', text: 'text-nuclear-blue', hex: C.blue },
+  { key: 'removed', label: 'Verified removed', bar: 'bg-success-green', text: 'text-success-green', hex: C.green }
+]
+
+// Donut breakdown — mutually-exclusive slices carved from the cumulative funnel so
+// every broker lands in exactly one bucket and the slices sum to the total.
+function donutSlices(counts) {
+  return [
+    { name: 'Verified removed', value: counts.removed, fill: C.green },
+    { name: 'Submitted · awaiting', value: counts.submitted - counts.removed, fill: C.blue },
+    { name: 'Found · needs opt-out', value: counts.found - counts.submitted, fill: C.yellow },
+    { name: 'Searched · clean', value: counts.searched - counts.found, fill: C.gray },
+    { name: 'Not started', value: counts.total - counts.searched, fill: 'rgba(163,176,194,0.18)' }
+  ].filter((s) => s.value > 0)
+}
+
+function FunnelDonut({ counts }) {
+  const slices = donutSlices(counts)
+  const pct = counts.total ? Math.round((counts.removed / counts.total) * 100) : 0
+  return (
+    <div className="relative h-44 w-44 shrink-0">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={slices}
+            dataKey="value"
+            nameKey="name"
+            innerRadius={58}
+            outerRadius={84}
+            startAngle={90}
+            endAngle={-270}
+            paddingAngle={slices.length > 1 ? 2 : 0}
+            stroke="none"
+            isAnimationActive={false}
+          >
+            {slices.map((s) => (
+              <Cell key={s.name} fill={s.fill} />
+            ))}
+          </Pie>
+        </PieChart>
+      </ResponsiveContainer>
+      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+        <span className="font-outfit text-2xl font-bold text-success-green leading-none">{pct}%</span>
+        <span className="text-[11px] text-muted-foreground">removed</span>
+      </div>
+    </div>
+  )
+}
 
 function PipelineFunnel({ counts, filter, setFilter }) {
-  const segs = [
-    { key: 'all', label: 'Total', n: counts.total },
-    { key: 'searched', label: 'Searched', n: counts.searched },
-    { key: 'found', label: 'Found', n: counts.found },
-    { key: 'submitted', label: 'Submitted', n: counts.submitted },
-    { key: 'removed', label: 'Verified', n: counts.removed }
-  ]
+  const total = counts.total || 1
+  const stageN = {
+    all: counts.total,
+    searched: counts.searched,
+    found: counts.found,
+    submitted: counts.submitted,
+    removed: counts.removed
+  }
   return (
-    <div className="flex flex-wrap items-center gap-1">
-      {segs.map((s, i) => (
-        <div key={s.key} className="flex items-center">
-          <button
-            onClick={() => setFilter(s.key)}
-            className={`rounded-lg px-3 py-1.5 text-left transition-colors ${
-              filter === s.key ? 'bg-nuclear-blue/15 ring-1 ring-nuclear-blue' : 'hover:bg-muted/50'
-            }`}
-          >
-            <div className="text-lg font-semibold leading-none text-foreground">{s.n}</div>
-            <div className="text-[11px] text-muted-foreground">{s.label}</div>
-          </button>
-          {i < segs.length - 1 && <ChevronRight className="h-4 w-4 text-muted-foreground/50" />}
-        </div>
-      ))}
+    <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center">
+      <FunnelDonut counts={counts} />
+      <div className="w-full flex-1 space-y-1.5">
+        {FUNNEL_STAGES.map((s, i) => {
+          const n = stageN[s.key]
+          const pct = Math.round((n / total) * 100)
+          const prevN = i === 0 ? n : stageN[FUNNEL_STAGES[i - 1].key]
+          const conv = i === 0 ? null : prevN === 0 ? 0 : Math.round((n / prevN) * 100)
+          const active = filter === s.key
+          return (
+            <button
+              key={s.key}
+              onClick={() => setFilter(active && s.key !== 'all' ? 'all' : s.key)}
+              className={`block w-full rounded-lg border px-3 py-1.5 text-left transition-colors ${
+                active ? 'border-nuclear-blue bg-nuclear-blue/5' : 'border-transparent hover:bg-muted/40'
+              }`}
+            >
+              <div className="mb-1 flex items-baseline justify-between gap-2">
+                <span className="flex items-baseline gap-2 text-sm font-medium text-foreground">
+                  {s.label}
+                  {conv !== null && (
+                    <span className="text-[11px] font-normal text-muted-foreground">
+                      {conv}% of prev
+                    </span>
+                  )}
+                </span>
+                <span className={`text-sm font-semibold ${s.text}`}>
+                  {n}
+                  <span className="ml-1 text-[11px] font-normal text-muted-foreground">{pct}%</span>
+                </span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted/40">
+                <div
+                  className={`h-full rounded-full ${s.bar} transition-all`}
+                  style={{ width: `${n > 0 ? Math.max(pct, 2) : 0}%` }}
+                />
+              </div>
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -1419,11 +1526,12 @@ export default function UserDetailPage() {
       followUp: 0
     }
     for (const { exposure } of records) {
+      const r = stageReached(exposure)
+      if (r >= 1) c.searched++
+      if (r >= 2) c.found++
+      if (r >= 3) c.submitted++
+      if (r >= 4) c.removed++
       const s = exposure?.removalStatus ?? 'not_started'
-      if (s !== 'not_started' && s !== 'skipped') c.searched++
-      if (['searched_found', 'submitted', 'removed', 'reappeared'].includes(s)) c.found++
-      if (['submitted', 'removed'].includes(s)) c.submitted++
-      if (s === 'removed' || exposure?.verifiedRemoved) c.removed++
       if (s === 'reappeared') c.reappeared++
       if (s === 'searched_found') c.foundUnsubmitted++
       if (isRecheckDue(exposure)) c.recheckDue++
@@ -1433,13 +1541,14 @@ export default function UserDetailPage() {
   }, [records])
 
   const matchesFilter = (exposure) => {
+    const r = stageReached(exposure)
     const s = exposure?.removalStatus ?? 'not_started'
     switch (filter) {
       case 'all': return true
-      case 'searched': return s !== 'not_started' && s !== 'skipped'
-      case 'found': return ['searched_found', 'submitted', 'removed', 'reappeared'].includes(s)
-      case 'submitted': return ['submitted', 'removed'].includes(s)
-      case 'removed': return s === 'removed' || !!exposure?.verifiedRemoved
+      case 'searched': return r >= 1
+      case 'found': return r >= 2
+      case 'submitted': return r >= 3
+      case 'removed': return r >= 4
       case 'reappeared': return s === 'reappeared'
       case 'recheck_due': return isRecheckDue(exposure)
       case 'found_unsubmitted': return s === 'searched_found'
@@ -1539,33 +1648,38 @@ export default function UserDetailPage() {
         {/* Main: funnel + filter + unified tracker */}
         <div className="space-y-4 lg:col-span-3">
           <Card className="glass-card">
-            <CardContent className="flex flex-wrap items-center justify-between gap-4 py-4">
+            <CardHeader className="pb-2">
+              <CardTitle className="font-outfit text-lg">Removal funnel</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-2">
               <PipelineFunnel counts={counts} filter={filter} setFilter={setFilter} />
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Filter brokers…"
-                  className="w-56 pl-8"
-                />
-              </div>
             </CardContent>
           </Card>
 
           <Card className="glass-card">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="font-outfit text-lg">
                 Master tracker
                 <span className="ml-2 text-sm font-normal text-muted-foreground">
                   {visible.length} of {records.length}
                 </span>
               </CardTitle>
-              {filter !== 'all' && (
-                <Button variant="ghost" size="sm" onClick={() => setFilter('all')}>
-                  Clear filter
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                {filter !== 'all' && (
+                  <Button variant="ghost" size="sm" onClick={() => setFilter('all')}>
+                    Clear filter
+                  </Button>
+                )}
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Filter brokers…"
+                    className="w-full pl-8 sm:w-56"
+                  />
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
