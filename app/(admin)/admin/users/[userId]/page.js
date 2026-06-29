@@ -191,6 +191,104 @@ function AutoArea({ value, placeholder, rows = 2, onCommit }) {
   )
 }
 
+// Common data types a broker listing can expose. Selecting cards is just a faster
+// way to build the comma-joined `whatWasFound` string, so storage is unchanged.
+const FOUND_DATA_PRESETS = [
+  'Name',
+  'Address',
+  'Phone number',
+  'Email',
+  'Family members',
+  'Relatives',
+  'Age / DOB',
+  'Aliases',
+  'Employer',
+  'Social media',
+  'Property records',
+  'Criminal records'
+]
+
+// Renders `whatWasFound` as toggleable cards plus an "Add" card for custom types.
+function FoundDataChips({ value, onCommit }) {
+  const selected = useMemo(
+    () => (value ?? '').split(',').map((s) => s.trim()).filter(Boolean),
+    [value]
+  )
+  const [adding, setAdding] = useState(false)
+  const [draft, setDraft] = useState('')
+
+  const has = (label) => selected.some((s) => s.toLowerCase() === label.toLowerCase())
+
+  const commitList = (list) => {
+    const next = list.join(', ')
+    onCommit(next === '' ? undefined : next)
+  }
+
+  const toggle = (label) => {
+    if (has(label)) commitList(selected.filter((s) => s.toLowerCase() !== label.toLowerCase()))
+    else commitList([...selected, label])
+  }
+
+  const addCustom = () => {
+    const v = draft.trim()
+    if (v && !has(v)) commitList([...selected, v])
+    setDraft('')
+    setAdding(false)
+  }
+
+  // Show every preset, plus any selected custom values not already a preset.
+  const customSelected = selected.filter(
+    (s) => !FOUND_DATA_PRESETS.some((p) => p.toLowerCase() === s.toLowerCase())
+  )
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {[...FOUND_DATA_PRESETS, ...customSelected].map((label) => {
+        const on = has(label)
+        return (
+          <button
+            key={label}
+            type="button"
+            onClick={() => toggle(label)}
+            className={`rounded-md border px-2.5 py-1 text-xs transition-colors ${
+              on
+                ? 'border-nuclear-blue bg-nuclear-blue/10 text-foreground'
+                : 'border-border bg-background/40 text-muted-foreground hover:border-nuclear-blue/50'
+            }`}
+          >
+            {on && <Check className="mr-1 inline h-3 w-3" />}
+            {label}
+          </button>
+        )
+      })}
+
+      {adding ? (
+        <input
+          autoFocus
+          value={draft}
+          placeholder="Custom…"
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={addCustom}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') addCustom()
+            if (e.key === 'Escape') { setDraft(''); setAdding(false) }
+          }}
+          className="w-24 rounded-md border border-nuclear-blue bg-background px-2.5 py-1 text-xs outline-none"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="rounded-md border border-dashed border-border px-2.5 py-1 text-xs text-muted-foreground hover:border-nuclear-blue/50 hover:text-foreground"
+        >
+          <Plus className="mr-1 inline h-3 w-3" />
+          Add
+        </button>
+      )}
+    </div>
+  )
+}
+
 function AutoDate({ valueMs, onCommit }) {
   return (
     <Input
@@ -508,7 +606,10 @@ function BrokerRow({
               />
             </Field>
             <Field label="What was found">
-              <AutoArea value={exposure?.whatWasFound} onCommit={(v) => commit({ whatWasFound: v })} />
+              <FoundDataChips
+                value={exposure?.whatWasFound}
+                onCommit={(v) => commit({ whatWasFound: v })}
+              />
             </Field>
             <Field label="Profile / listing URL">
               <AutoText
