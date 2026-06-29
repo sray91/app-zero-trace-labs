@@ -311,9 +311,9 @@ function BrokerRow({
         <TableCell>
           <Badge variant="outline">{TIER_LABEL[broker.tier ?? 3]}</Badge>
         </TableCell>
-        <TableCell>
-          <div className="font-medium text-foreground">{broker.name}</div>
-          <div className="text-xs text-muted-foreground">
+        <TableCell className="max-w-[280px]">
+          <div className="truncate font-medium text-foreground">{broker.name}</div>
+          <div className="truncate text-xs text-muted-foreground">
             {broker.category}
             {broker.alsoCovers && <span className="opacity-70"> · also {broker.alsoCovers}</span>}
           </div>
@@ -350,7 +350,7 @@ function BrokerRow({
       </TableRow>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] sm:max-w-4xl overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-2">
               <Badge variant="outline">{TIER_LABEL[broker.tier ?? 3]}</Badge>
