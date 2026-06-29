@@ -1043,7 +1043,7 @@ function InboxPanel({ userId, brokerNames }) {
       </CardContent>
 
       <Dialog open={!!active} onOpenChange={(o) => !o && setOpenId(null)}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="sm:max-w-4xl">
           {active && (
             <>
               <DialogHeader>
