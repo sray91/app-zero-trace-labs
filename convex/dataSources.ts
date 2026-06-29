@@ -61,6 +61,27 @@ export const update = mutation({
   },
 });
 
+// Inline edit of just the search / opt-out URLs, used from the per-user broker panel
+// so admins can correct a bad link without leaving the page. Narrow on purpose: unlike
+// `update` it touches only the two URL fields (+ derived legacy `url`), leaving tier,
+// category, difficulty, etc. untouched. Admin only.
+export const setUrls = mutation({
+  args: {
+    id: v.id("dataSources"),
+    searchUrl: v.optional(v.string()),
+    optOutUrl: v.optional(v.string()),
+  },
+  handler: async (ctx, { id, searchUrl, optOutUrl }) => {
+    await requireAdmin(ctx);
+    await ctx.db.patch(id, {
+      searchUrl,
+      optOutUrl,
+      url: searchUrl ?? optOutUrl ?? "",
+    });
+    return id;
+  },
+});
+
 // Remove a broker from the catalog. Soft-delete (isActive: false) to preserve
 // referential integrity with per-user brokerExposures rows. Admin only.
 export const remove = mutation({
