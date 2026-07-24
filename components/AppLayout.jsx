@@ -6,6 +6,7 @@ import { useQuery } from 'convex/react'
 import { Loader2 } from 'lucide-react'
 import { api } from '@/convex/_generated/api'
 import { Sidebar } from '@/components/Sidebar'
+import { SupportWidget } from '@/components/support/SupportWidget'
 import { useAuth } from '@/lib/contexts/AuthContext'
 
 export function AppLayout({ children }) {
@@ -42,6 +43,9 @@ export function AppLayout({ children }) {
         <div className="lg:hidden h-16" /> {/* Spacer for mobile menu button */}
         {children}
       </main>
+
+      {/* Floating support chat (bot + Slack bridge) */}
+      <SupportWidget />
     </div>
   )
 }

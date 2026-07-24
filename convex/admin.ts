@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { requireAdmin } from "./users";
 import { Doc, Id } from "./_generated/dataModel";
 
@@ -168,6 +169,21 @@ export const setExposure = mutation({
         q.eq("userId", userId).eq("dataSourceId", dataSourceId)
       )
       .unique();
+
+    // Push-notify the user when the admin submits a removal on their behalf
+    // (transition into "submitted"; re-saves while already submitted stay quiet).
+    if (
+      patch.removalStatus === "submitted" &&
+      existing?.removalStatus !== "submitted"
+    ) {
+      const source = await ctx.db.get(dataSourceId);
+      await ctx.scheduler.runAfter(0, internal.pushNotifications.sendToUser, {
+        userId,
+        title: "Removal submitted",
+        body: `We submitted your opt-out request to ${source?.name ?? "a data broker"}.`,
+        data: { screen: "dashboard" },
+      });
+    }
 
     // Screenshot change (id = set/replace, null = clear). undefined means the
     // caller didn't touch it. Delete any file we're replacing or removing.
