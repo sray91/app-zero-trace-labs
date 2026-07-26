@@ -19,7 +19,7 @@ const STATUS_REACHED: Record<string, number> = {
 // signal, not removalStatus alone — recording a search sets searchedAt/exposureStatus
 // but leaves removalStatus 'not_started', so a status-only reading under-counts
 // "Searched". Each higher stage implies the lower ones, so the funnel stays monotonic.
-function stageReached(e: Doc<"brokerExposures"> | undefined): number {
+export function stageReached(e: Doc<"brokerExposures"> | undefined): number {
   if (!e) return 0;
   let r = STATUS_REACHED[e.removalStatus ?? "not_started"] ?? 0;
   if (e.verifiedRemoved || e.removedAt) r = Math.max(r, 4);

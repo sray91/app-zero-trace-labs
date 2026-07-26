@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { notifyRemovalMilestone } from "./pushNotifications";
 import { requireAdmin } from "./users";
+import { stageReached } from "./dashboard";
 import { Doc, Id } from "./_generated/dataModel";
 
 // ---- Users overview ----
@@ -32,11 +33,16 @@ export const listUsers = query({
           .withIndex("by_user", (q) => q.eq("userId", user._id))
           .collect();
 
+        // Derive each broker's funnel stage from every signal (status string,
+        // timestamps, verifiedRemoved) via the same stageReached() the user
+        // dashboard and admin detail page use — counting the raw removalStatus
+        // string alone under-reports records tracked via the other fields.
         let removed = 0;
         let submitted = 0;
         for (const e of exposures) {
-          if (e.removalStatus === "removed") removed++;
-          else if (e.removalStatus === "submitted") submitted++;
+          const stage = stageReached(e);
+          if (stage >= 4) removed++;
+          else if (stage === 3) submitted++;
         }
 
         const openTasks = (
@@ -170,20 +176,9 @@ export const setExposure = mutation({
       )
       .unique();
 
-    // Push-notify the user when the admin submits a removal on their behalf
-    // (transition into "submitted"; re-saves while already submitted stay quiet).
-    if (
-      patch.removalStatus === "submitted" &&
-      existing?.removalStatus !== "submitted"
-    ) {
-      const source = await ctx.db.get(dataSourceId);
-      await ctx.scheduler.runAfter(0, internal.pushNotifications.sendToUser, {
-        userId,
-        title: "Removal submitted",
-        body: `We submitted your opt-out request to ${source?.name ?? "a data broker"}.`,
-        data: { screen: "dashboard" },
-      });
-    }
+    // Push-notify the user on newly reached removal milestones (submitted /
+    // removed), whether recorded via removalStatus or the timestamp columns.
+    await notifyRemovalMilestone(ctx, userId, dataSourceId, existing, patch);
 
     // Screenshot change (id = set/replace, null = clear). undefined means the
     // caller didn't touch it. Delete any file we're replacing or removing.
