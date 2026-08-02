@@ -8,13 +8,24 @@ import { Id } from "./_generated/dataModel";
 const URL_RE = /https?:\/\/[^\s"'<>)\]}]+/gi;
 const VERIFY_HINT = /(verif|confirm|opt[-_]?out|remov|unsubscrib|validate|activate)/i;
 
+// Email bodies carry entity-encoded URLs (`&amp;` in href attributes and in
+// text parts derived from HTML); stored links must be decoded to be openable.
+const decodeEntities = (s: string) =>
+  s
+    .replace(/&amp;/gi, "&")
+    .replace(/&#0*38;/g, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0*39;/g, "'");
+
 function extractLinks(text?: string, html?: string): string[] {
   const found = new Set<string>();
   for (const src of [text, html]) {
     if (!src) continue;
     for (const m of src.matchAll(URL_RE)) {
       // Trim trailing punctuation that commonly clings to URLs in plain text.
-      found.add(m[0].replace(/[.,;:'")\]}>]+$/, ""));
+      found.add(decodeEntities(m[0]).replace(/[.,;:'")\]}>]+$/, ""));
     }
   }
   return Array.from(found)

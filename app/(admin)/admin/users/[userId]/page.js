@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 import { useQuery, useMutation, useAction } from 'convex/react'
@@ -940,7 +940,7 @@ function BrokerRow({
                       {m.extractedLinks.map((href, i) => (
                         <PopupButton
                           key={href}
-                          href={href}
+                          href={decodeEntities(href)}
                           variant={i === 0 ? 'default' : 'outline'}
                           className="h-7"
                         >
@@ -1510,6 +1510,98 @@ function ProxyEmailRow({ userId, proxyEmail }) {
   )
 }
 
+// Plain-text email parts often arrive with HTML entities still encoded.
+const decodeEntities = (s) =>
+  s.replace(
+    /&(amp|lt|gt|quot|#0*39|apos|nbsp);/g,
+    (_, e) =>
+      ({ amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' })[e.replace(/^#0*39$/, 'apos')]
+  )
+
+const URL_RE = /https?:\/\/[^\s<>"')]+[^\s<>"').,;:!?]/g
+
+// Plain-text fallback: decode entities and turn bare URLs into clickable links.
+// Rendered on the same white canvas as the HTML frame so all emails read light.
+function LinkifiedText({ text }) {
+  const decoded = decodeEntities(text)
+  const nodes = []
+  let last = 0
+  for (const match of decoded.matchAll(URL_RE)) {
+    if (match.index > last) nodes.push(decoded.slice(last, match.index))
+    const href = match[0]
+    nodes.push(
+      <a
+        key={`${match.index}-${href}`}
+        href={href}
+        className="text-blue-600 underline underline-offset-2 hover:opacity-80"
+        onClick={(e) => {
+          e.preventDefault()
+          openBrokerWindow(href)
+        }}
+      >
+        {href}
+      </a>
+    )
+    last = match.index + href.length
+  }
+  if (last < decoded.length) nodes.push(decoded.slice(last))
+  return (
+    <div className="rounded-md bg-white p-4">
+      <p className="whitespace-pre-wrap break-words text-sm text-gray-900">{nodes}</p>
+    </div>
+  )
+}
+
+// Renders the HTML part of an email the way a mail client would: inside a
+// sandboxed iframe (no scripts) so the email's own styles can't leak into the
+// app, on a white canvas since emails are designed for light backgrounds.
+// Link clicks are intercepted and routed through the shared broker popup.
+function EmailHtmlFrame({ html }) {
+  const frameRef = useRef(null)
+  const [height, setHeight] = useState(160)
+
+  const srcDoc = `<!doctype html><html><head><meta charset="utf-8"><base target="_blank"><style>
+    body { margin: 16px; font: 14px/1.5 -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f2937; word-break: break-word; }
+    img { max-width: 100%; height: auto; }
+    a { color: #2563eb; }
+  </style></head><body>${html}</body></html>`
+
+  const handleLoad = () => {
+    const doc = frameRef.current?.contentDocument
+    if (!doc) return
+    const measure = () => setHeight(Math.max(doc.body?.scrollHeight ?? 0, 120))
+    doc.addEventListener('click', (e) => {
+      const a = e.target.closest?.('a[href]')
+      if (!a) return
+      e.preventDefault()
+      openBrokerWindow(a.href)
+    })
+    // Images load after the document does and change the content height.
+    for (const img of doc.images) img.addEventListener('load', measure)
+    measure()
+  }
+
+  return (
+    <iframe
+      ref={frameRef}
+      title="Email content"
+      sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+      srcDoc={srcDoc}
+      onLoad={handleLoad}
+      className="w-full rounded-md bg-white"
+      style={{ height }}
+    />
+  )
+}
+
+// Message body: prefer the HTML part like a real mail client, fall back to
+// linkified plain text.
+function EmailBody({ message }) {
+  if (message.html) return <EmailHtmlFrame html={message.html} />
+  if (message.text) return <LinkifiedText text={message.text} />
+  return <p className="text-sm text-muted-foreground">(empty message)</p>
+}
+
 // Verification emails that arrived at the user's proxy address, shown on the
 // full-width Inbox tab: message list on the left, reading pane on the right.
 function InboxView({ messages, brokerNames }) {
@@ -1619,19 +1711,8 @@ function InboxView({ messages, brokerNames }) {
                     </div>
                   </div>
 
-                  <div className="max-h-[50vh] overflow-y-auto bg-muted/30 p-4">
-                    {active.text ? (
-                      <p className="whitespace-pre-wrap break-words text-sm text-foreground">
-                        {active.text}
-                      </p>
-                    ) : active.html ? (
-                      <div
-                        className="prose prose-sm prose-invert max-w-none break-words"
-                        dangerouslySetInnerHTML={{ __html: active.html }}
-                      />
-                    ) : (
-                      <p className="text-sm text-muted-foreground">(empty message)</p>
-                    )}
+                  <div className="max-h-[60vh] overflow-y-auto bg-muted/30 p-4">
+                    <EmailBody message={active} />
                   </div>
 
                   {active.extractedLinks.length > 0 && (
@@ -1639,7 +1720,7 @@ function InboxView({ messages, brokerNames }) {
                       {active.extractedLinks.map((href, i) => (
                         <PopupButton
                           key={href}
-                          href={href}
+                          href={decodeEntities(href)}
                           variant={i === 0 ? 'default' : 'outline'}
                           className="h-8"
                         >
