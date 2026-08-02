@@ -58,10 +58,23 @@ export const receiveInbound = internalMutation({
   },
   handler: async (ctx, args) => {
     const proxyEmail = args.to.trim().toLowerCase();
-    const user = await ctx.db
+    let user = await ctx.db
       .query("users")
       .withIndex("by_proxy_email", (q) => q.eq("proxyEmail", proxyEmail))
       .unique();
+    // Aliases migrated off a legacy domain (e.g. mail.0tracelabs.com) keep their
+    // token, so mail sent to the old address still resolves via the current domain.
+    if (!user) {
+      const domain = process.env.PROXY_EMAIL_DOMAIN || "0tracelabs.com";
+      const local = proxyEmail.split("@")[0];
+      const migrated = `${local}@${domain}`;
+      if (migrated !== proxyEmail) {
+        user = await ctx.db
+          .query("users")
+          .withIndex("by_proxy_email", (q) => q.eq("proxyEmail", migrated))
+          .unique();
+      }
+    }
     if (!user) {
       console.warn("Inbound email to unknown alias:", proxyEmail);
       return { stored: false };
