@@ -258,3 +258,24 @@ export const backfillProxyEmails = internalMutation({
     return { updated };
   },
 });
+
+// One-shot migration: move every alias onto the current PROXY_EMAIL_DOMAIN, keeping
+// the token so addresses brokers already have stay tied to the same user (inbound
+// mail to a legacy domain falls back to a primary-domain lookup in convex/inbox.ts):
+//   npx convex run users:migrateProxyEmailDomains
+export const migrateProxyEmailDomains = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const domain = process.env.PROXY_EMAIL_DOMAIN || "0tracelabs.com";
+    const users = await ctx.db.query("users").collect();
+    let updated = 0;
+    for (const u of users) {
+      if (!u.proxyEmail) continue;
+      const [local, oldDomain] = u.proxyEmail.split("@");
+      if (!oldDomain || oldDomain === domain) continue;
+      await ctx.db.patch(u._id, { proxyEmail: `${local}@${domain}` });
+      updated++;
+    }
+    return { updated, domain };
+  },
+});
