@@ -634,6 +634,7 @@ function BrokerRow({
   broker,
   exposure,
   tasks,
+  inboxMessages = [],
   userId,
   userEmail,
   proxyEmail,
@@ -643,6 +644,7 @@ function BrokerRow({
   deleteTask
 }) {
   const commit = (patch) => setExposure({ userId, dataSourceId: broker._id, ...patch })
+  const markRead = useMutation(api.inbox.markRead)
   const action = nextAction(broker, exposure)
   const activity = lastActivity(exposure)
   // Step-completion flags drive the procedure timeline's checkmarks.
@@ -901,6 +903,57 @@ function BrokerRow({
               </Field>
             </Step>
           </div>
+
+          {/* Opt-out emails matched to this broker, with their verification links */}
+          {inboxMessages.length > 0 && (
+            <section className="space-y-2 rounded-lg border border-border bg-background/40 p-3">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Opt-out emails
+                <span className="ml-2 font-normal normal-case tracking-normal">
+                  {inboxMessages.length} received
+                </span>
+              </h4>
+              {inboxMessages.map((m) => (
+                <div
+                  key={m._id}
+                  className={`rounded-lg border p-2 ${
+                    m.isRead ? 'border-border' : 'border-nuclear-blue/50 bg-nuclear-blue/5'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      {!m.isRead && <span className="h-2 w-2 shrink-0 rounded-full bg-nuclear-blue" />}
+                      <span className="truncate text-sm font-medium text-foreground">
+                        {m.subject || '(no subject)'}
+                      </span>
+                    </div>
+                    <span className="whitespace-nowrap text-[11px] text-muted-foreground">
+                      {relTime(m.receivedAt)}
+                    </span>
+                  </div>
+                  <div className="mt-0.5 truncate text-xs text-muted-foreground">{m.fromAddress}</div>
+                  {m.extractedLinks.length > 0 && (
+                    <div
+                      className="mt-2 flex flex-wrap gap-2"
+                      onClick={() => !m.isRead && markRead({ messageId: m._id, isRead: true })}
+                    >
+                      {m.extractedLinks.map((href, i) => (
+                        <PopupButton
+                          key={href}
+                          href={href}
+                          variant={i === 0 ? 'default' : 'outline'}
+                          className="h-7"
+                        >
+                          {i === 0 ? 'Open verification link' : `Link ${i + 1}`}
+                          <ExternalLink className="ml-1 h-3 w-3" />
+                        </PopupButton>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </section>
+          )}
 
           {/* Broker-scoped tasks */}
           <section className="space-y-2 rounded-lg border border-border bg-background/40 p-3">
@@ -1714,6 +1767,14 @@ export default function UserDetailPage() {
     return m
   }, [records])
 
+  const messagesByBroker = useMemo(() => {
+    const m = {}
+    for (const msg of inboxMessages ?? []) {
+      if (msg.dataSourceId) (m[msg.dataSourceId] ??= []).push(msg)
+    }
+    return m
+  }, [inboxMessages])
+
   const openTasks = (detail?.tasks ?? []).filter((t) => t.status !== 'done')
 
   if (detail === undefined) {
@@ -1846,6 +1907,7 @@ export default function UserDetailPage() {
                       broker={broker}
                       exposure={exposure}
                       tasks={tasksByBroker[broker._id] ?? []}
+                      inboxMessages={messagesByBroker[broker._id] ?? []}
                       userId={userId}
                       userEmail={user.email}
                       proxyEmail={user.proxyEmail}
