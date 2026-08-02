@@ -1,6 +1,6 @@
 # Per-user proxy inbox — setup
 
-Gives every user a unique alias (e.g. `u-ab12cd34@mail.0tracelabs.com`) that the
+Gives every user a unique alias (e.g. `u-ab12cd34ef@0tracelabs.com`) that the
 admin types into broker opt-out forms. Broker verification emails are routed here and
 appear in the admin user-detail page, where the admin clicks the verification link.
 
@@ -10,8 +10,11 @@ Flow: broker → alias → Cloudflare apex catch-all → this Worker →
 **Why the apex catch-all:** Cloudflare's catch-all is zone-wide only — there is no
 per-subdomain catch-all and custom address rules don't support wildcards. Since aliases
 are random, the only way to match them is the apex catch-all. The Worker then splits by
-recipient domain:
-- `<alias>@mail.0tracelabs.com` → parsed and sent to Convex (proxy inbox)
+recipient:
+- `u-<token>@` any domain listed in `PROXY_EMAIL_DOMAIN` → parsed and sent to Convex
+  (proxy inbox). Aliases live on the apex (`0tracelabs.com`); the legacy
+  `mail.0tracelabs.com` domain stays listed so aliases already registered with
+  brokers keep working.
 - anything else (real `@0tracelabs.com` mail) → forwarded to `FALLBACK_EMAIL` so it's
   never lost.
 
@@ -28,22 +31,20 @@ npx convex deploy
 
 ```sh
 openssl rand -hex 32   # one secret; reuse for the Worker in step 4
-npx convex env set --prod PROXY_EMAIL_DOMAIN mail.0tracelabs.com
+npx convex env set --prod PROXY_EMAIL_DOMAIN 0tracelabs.com
 npx convex env set --prod INBOUND_EMAIL_SECRET <paste the secret>
 ```
 
 | Var | Value |
 | --- | --- |
-| `PROXY_EMAIL_DOMAIN` | the mail domain, `mail.0tracelabs.com` |
+| `PROXY_EMAIL_DOMAIN` | the domain new aliases are minted on, `0tracelabs.com` (Convex takes a single domain; the Worker's copy is comma-separated and also lists legacy domains) |
 | `INBOUND_EMAIL_SECRET` | a long random string (shared with the Worker) |
 
-## 3. Cloudflare: add the `mail` subdomain + verify a fallback inbox
+## 3. Cloudflare: verify a fallback inbox
 
-Email Routing is already enabled on `0tracelabs.com`.
-1. **Email → Email Routing → Settings → Subdomains** → add `mail`. Confirm it
-   provisions MX records (`route*.mx.cloudflare.net`) for `mail.0tracelabs.com` —
-   without those, alias mail won't be delivered.
-2. **Email → Email Routing → Destination addresses** → add and **verify** the real
+Email Routing is already enabled on `0tracelabs.com` (apex MX records
+`route*.mx.cloudflare.net` are provisioned automatically).
+1. **Email → Email Routing → Destination addresses** → add and **verify** the real
    inbox you want non-alias apex mail forwarded to (click the verification email).
    This is the `FALLBACK_EMAIL`.
 
@@ -66,8 +67,9 @@ Cloudflare → **Email → Email Routing → Routing rules → Catch-all address
 Action **Send to a Worker** → `zerotrace-inbound-email` → Save & enable.
 
 (Do **not** create a custom-address rule — those need an exact local part and can't
-match random aliases. The Worker handles the apex-vs-subdomain split itself, so you
-don't need per-address forward rules for your real mail either.)
+match random aliases. The Worker tells aliases apart from real mail by their
+`u-<token>` shape, so you don't need per-address forward rules for your real mail
+either.)
 
 ## 6. Provision aliases
 
