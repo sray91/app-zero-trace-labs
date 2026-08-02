@@ -1457,10 +1457,9 @@ function ProxyEmailRow({ userId, proxyEmail }) {
   )
 }
 
-// Verification emails that arrived at the user's proxy address. Each message is a
-// compact row; clicking opens a popup with the full message, sender, and recipient.
-function InboxPanel({ userId, brokerNames }) {
-  const messages = useQuery(api.inbox.listForUser, { userId })
+// Verification emails that arrived at the user's proxy address, shown on the
+// full-width Inbox tab: message list on the left, reading pane on the right.
+function InboxView({ messages, brokerNames }) {
   const markRead = useMutation(api.inbox.markRead)
   const [openId, setOpenId] = useState(null)
 
@@ -1491,111 +1490,122 @@ function InboxPanel({ userId, brokerNames }) {
           </span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2">
-        {messages.length === 0 && (
+      <CardContent>
+        {messages.length === 0 ? (
           <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
             <Inbox className="h-4 w-4" />
             No verification emails yet. Paste the opt-out email into broker forms;
             confirmations will appear here.
           </div>
-        )}
-        {messages.map((m) => (
-          <button
-            key={m._id}
-            type="button"
-            onClick={() => {
-              setOpenId(m._id)
-              if (!m.isRead) markRead({ messageId: m._id, isRead: true })
-            }}
-            className={`w-full rounded-lg border p-3 text-left transition-colors hover:bg-muted/50 ${
-              m.isRead ? 'border-border' : 'border-nuclear-blue/50 bg-nuclear-blue/5'
-            }`}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-2">
-                {!m.isRead && <span className="h-2 w-2 shrink-0 rounded-full bg-nuclear-blue" />}
-                <span className="truncate text-sm font-medium text-foreground">
-                  {m.subject || '(no subject)'}
-                </span>
-              </div>
-              <span className="whitespace-nowrap text-[11px] text-muted-foreground">
-                {relTime(m.receivedAt)}
-              </span>
-            </div>
-            <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="truncate">{m.fromAddress}</span>
-              {m.dataSourceId && brokerNames[m.dataSourceId] && (
-                <Badge variant="outline" className="shrink-0 text-[10px]">
-                  {brokerNames[m.dataSourceId]}
-                </Badge>
-              )}
-            </div>
-          </button>
-        ))}
-      </CardContent>
-
-      <Dialog open={!!active} onOpenChange={(o) => !o && setOpenId(null)}>
-        <DialogContent className="sm:max-w-4xl">
-          {active && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="font-outfit">
-                  {active.subject || '(no subject)'}
-                </DialogTitle>
-                <DialogDescription className="space-y-0.5 pt-1">
-                  <span className="block">
-                    <span className="text-muted-foreground">From: </span>
-                    <span className="text-foreground">{active.fromAddress}</span>
-                  </span>
-                  <span className="block">
-                    <span className="text-muted-foreground">To: </span>
-                    <span className="text-foreground">{active.proxyEmail}</span>
-                  </span>
-                  <span className="block text-[11px]">
-                    {new Date(active.receivedAt).toLocaleString()}
-                    {active.dataSourceId && brokerNames[active.dataSourceId] && (
-                      <Badge variant="outline" className="ml-2 text-[10px]">
-                        {brokerNames[active.dataSourceId]}
+        ) : (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div className="space-y-2 lg:max-h-[70vh] lg:overflow-y-auto lg:pr-1">
+              {messages.map((m) => (
+                <button
+                  key={m._id}
+                  type="button"
+                  onClick={() => {
+                    setOpenId(m._id)
+                    if (!m.isRead) markRead({ messageId: m._id, isRead: true })
+                  }}
+                  className={`w-full rounded-lg border p-3 text-left transition-colors hover:bg-muted/50 ${
+                    m._id === openId
+                      ? 'border-nuclear-blue bg-nuclear-blue/10'
+                      : m.isRead
+                        ? 'border-border'
+                        : 'border-nuclear-blue/50 bg-nuclear-blue/5'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      {!m.isRead && <span className="h-2 w-2 shrink-0 rounded-full bg-nuclear-blue" />}
+                      <span className="truncate text-sm font-medium text-foreground">
+                        {m.subject || '(no subject)'}
+                      </span>
+                    </div>
+                    <span className="whitespace-nowrap text-[11px] text-muted-foreground">
+                      {relTime(m.receivedAt)}
+                    </span>
+                  </div>
+                  <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="truncate">{m.fromAddress}</span>
+                    {m.dataSourceId && brokerNames[m.dataSourceId] && (
+                      <Badge variant="outline" className="shrink-0 text-[10px]">
+                        {brokerNames[m.dataSourceId]}
                       </Badge>
                     )}
-                  </span>
-                </DialogDescription>
-              </DialogHeader>
+                  </div>
+                </button>
+              ))}
+            </div>
 
-              <div className="max-h-[50vh] overflow-y-auto rounded-lg border bg-muted/30 p-4">
-                {active.text ? (
-                  <p className="whitespace-pre-wrap break-words text-sm text-foreground">
-                    {active.text}
-                  </p>
-                ) : active.html ? (
-                  <div
-                    className="prose prose-sm prose-invert max-w-none break-words"
-                    dangerouslySetInnerHTML={{ __html: active.html }}
-                  />
-                ) : (
-                  <p className="text-sm text-muted-foreground">(empty message)</p>
-                )}
-              </div>
+            <div className="lg:col-span-2">
+              {active ? (
+                <div className="rounded-lg border">
+                  <div className="border-b p-4">
+                    <h3 className="font-outfit text-base font-semibold text-foreground">
+                      {active.subject || '(no subject)'}
+                    </h3>
+                    <div className="mt-1 space-y-0.5 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">From: </span>
+                        <span className="text-foreground">{active.fromAddress}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">To: </span>
+                        <span className="text-foreground">{active.proxyEmail}</span>
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {new Date(active.receivedAt).toLocaleString()}
+                        {active.dataSourceId && brokerNames[active.dataSourceId] && (
+                          <Badge variant="outline" className="ml-2 text-[10px]">
+                            {brokerNames[active.dataSourceId]}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-              {active.extractedLinks.length > 0 && (
-                <DialogFooter className="flex-wrap gap-2 sm:justify-start">
-                  {active.extractedLinks.map((href, i) => (
-                    <PopupButton
-                      key={href}
-                      href={href}
-                      variant={i === 0 ? 'default' : 'outline'}
-                      className="h-8"
-                    >
-                      {i === 0 ? 'Open verification link' : 'Link'}
-                      <ExternalLink className="ml-1 h-3 w-3" />
-                    </PopupButton>
-                  ))}
-                </DialogFooter>
+                  <div className="max-h-[50vh] overflow-y-auto bg-muted/30 p-4">
+                    {active.text ? (
+                      <p className="whitespace-pre-wrap break-words text-sm text-foreground">
+                        {active.text}
+                      </p>
+                    ) : active.html ? (
+                      <div
+                        className="prose prose-sm prose-invert max-w-none break-words"
+                        dangerouslySetInnerHTML={{ __html: active.html }}
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">(empty message)</p>
+                    )}
+                  </div>
+
+                  {active.extractedLinks.length > 0 && (
+                    <div className="flex flex-wrap gap-2 border-t p-4">
+                      {active.extractedLinks.map((href, i) => (
+                        <PopupButton
+                          key={href}
+                          href={href}
+                          variant={i === 0 ? 'default' : 'outline'}
+                          className="h-8"
+                        >
+                          {i === 0 ? 'Open verification link' : 'Link'}
+                          <ExternalLink className="ml-1 h-3 w-3" />
+                        </PopupButton>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex h-full min-h-48 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
+                  Select a message to read it here.
+                </div>
               )}
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+            </div>
+          </div>
+        )}
+      </CardContent>
     </Card>
   )
 }
@@ -1611,6 +1621,10 @@ export default function UserDetailPage() {
 
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('all')
+  const [tab, setTab] = useState('overview')
+
+  const inboxMessages = useQuery(api.inbox.listForUser, { userId })
+  const inboxUnread = (inboxMessages ?? []).filter((m) => !m.isRead).length
 
   const records = detail?.records ?? []
 
@@ -1745,6 +1759,36 @@ export default function UserDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Tabs */}
+      <div className="flex items-center gap-2">
+        {[
+          { key: 'overview', label: 'Overview' },
+          { key: 'inbox', label: 'Inbox' }
+        ].map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setTab(t.key)}
+            className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+              tab === t.key
+                ? 'border-nuclear-blue bg-nuclear-blue/10 text-foreground'
+                : 'border-border text-muted-foreground hover:bg-muted/40'
+            }`}
+          >
+            {t.key === 'inbox' && <Inbox className="h-4 w-4" />}
+            {t.label}
+            {t.key === 'inbox' && inboxUnread > 0 && (
+              <span className="rounded-full bg-nuclear-blue px-1.5 py-0.5 text-[11px] font-semibold leading-none text-background">
+                {inboxUnread}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'inbox' && <InboxView messages={inboxMessages} brokerNames={brokerNames} />}
+
+      {tab === 'overview' && (
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
         {/* Main: funnel + filter + unified tracker */}
         <div className="space-y-4 lg:col-span-3">
@@ -1824,9 +1868,8 @@ export default function UserDetailPage() {
           </Card>
         </div>
 
-        {/* Rail: opt-out inbox + action queue */}
+        {/* Rail: action queue */}
         <div className="space-y-6 lg:col-span-1">
-          <InboxPanel userId={userId} brokerNames={brokerNames} />
           <ActionQueue
             userId={userId}
             counts={counts}
@@ -1840,6 +1883,7 @@ export default function UserDetailPage() {
           />
         </div>
       </div>
+      )}
     </div>
   )
 }
