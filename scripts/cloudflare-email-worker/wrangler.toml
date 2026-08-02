@@ -7,8 +7,10 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 # Prod Convex HTTP endpoint (.convex.site, not .convex.cloud).
 CONVEX_INBOUND_URL = "https://standing-swordfish-884.convex.site/inbound-email"
-# The alias subdomain. Must match PROXY_EMAIL_DOMAIN on Convex.
-PROXY_EMAIL_DOMAIN = "mail.0tracelabs.com"
+# Comma-separated alias domains. The first must match PROXY_EMAIL_DOMAIN on Convex
+# (where new aliases are minted); the rest are legacy domains still accepted so
+# addresses already registered with brokers keep working.
+PROXY_EMAIL_DOMAIN = "0tracelabs.com,mail.0tracelabs.com"
 # Where real (non-alias) apex mail gets forwarded. MUST be a verified Email Routing
 # destination address (Email -> Email Routing -> Destination addresses).
 FALLBACK_EMAIL = "swanagan@ghostletter.us"

@@ -149,7 +149,7 @@ export const upsertProfile = mutation({
 // the Convex deployment (set it to your Cloudflare Email Routing domain).
 const PROXY_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
 export function makeProxyEmail(): string {
-  const domain = process.env.PROXY_EMAIL_DOMAIN || "mail.0tracelabs.com";
+  const domain = process.env.PROXY_EMAIL_DOMAIN || "0tracelabs.com";
   const bytes = new Uint8Array(10);
   crypto.getRandomValues(bytes);
   const token = Array.from(bytes, (b) => PROXY_ALPHABET[b % 36]).join("");
