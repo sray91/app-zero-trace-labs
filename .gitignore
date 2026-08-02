@@ -25,3 +25,6 @@ yarn-error.log*
 .env*.local
 config.bat
 .vercel
+
+# clerk configuration (can include secrets)
+/.clerk/
