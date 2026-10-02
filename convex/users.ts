@@ -7,6 +7,7 @@ import {
   type MutationCtx,
 } from "./_generated/server";
 import { Doc } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
 
 // Resolve the Convex user document for the authenticated Clerk identity.
 export async function getCurrentUser(
@@ -179,6 +180,14 @@ export const upsertFromClerk = internalMutation({
         // Backfill the proxy address for users created before this feature.
         proxyEmail: existing.proxyEmail ?? makeProxyEmail(),
       });
+      // Retries a failed beehiiv add, or catches an email added after signup.
+      if (args.email && !existing.beehiivSubscribedAt) {
+        await ctx.scheduler.runAfter(0, internal.beehiiv.addSubscriber, {
+          userId: existing._id,
+          email: args.email,
+          name: args.name,
+        });
+      }
       return existing._id;
     }
 
@@ -200,6 +209,20 @@ export const upsertFromClerk = internalMutation({
       .unique();
     if (orphanSub && !orphanSub.userId) {
       await ctx.db.patch(orphanSub._id, { userId });
+    }
+
+    await ctx.scheduler.runAfter(0, internal.signupAlerts.sendNewUserAlert, {
+      clerkId: args.clerkId,
+      email: args.email,
+      name: args.name,
+    });
+
+    if (args.email) {
+      await ctx.scheduler.runAfter(0, internal.beehiiv.addSubscriber, {
+        userId,
+        email: args.email,
+        name: args.name,
+      });
     }
 
     return userId;

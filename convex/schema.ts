@@ -19,6 +19,9 @@ export default defineSchema({
     // routed (Cloudflare Email Routing -> /inbound-email) into `inboxMessages`.
     // Generated on first sync (convex/users.ts) and backfilled for existing users.
     proxyEmail: v.optional(v.string()),
+    // Set once the user has been added to the beehiiv newsletter (convex/beehiiv.ts).
+    beehiivSubscribedAt: v.optional(v.number()),
+    beehiivSubscriberId: v.optional(v.string()),
   })
     .index("by_clerk_id", ["clerkId"])
     .index("by_proxy_email", ["proxyEmail"]),
